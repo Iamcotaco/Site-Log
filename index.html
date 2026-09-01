@@ -1152,10 +1152,17 @@
       if(!byLot[key]){ byLot[key] = []; lotOrder.push(key); }
       byLot[key].push(entry);
     });
+    function addressSortKey(address){
+      return (address || '').trim().replace(/^\d+\s*/, '').toLowerCase();
+    }
     lotOrder.sort(function(a,b){
       var ea = byLot[a][0], eb = byLot[b][0];
       var labelA = ea.address || ('Blk ' + ea.block + ' Lot ' + ea.lot);
       var labelB = eb.address || ('Blk ' + eb.block + ' Lot ' + eb.lot);
+      var keyA = addressSortKey(labelA);
+      var keyB = addressSortKey(labelB);
+      var cmp = keyA.localeCompare(keyB, undefined, {numeric:true});
+      if(cmp !== 0) return cmp;
       return labelA.localeCompare(labelB, undefined, {numeric:true});
     });
     lotOrder.forEach(function(key){
