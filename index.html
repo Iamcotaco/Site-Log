@@ -140,6 +140,23 @@
         <input type="date" id="inspectionDate">
       </div>
     </div>
+    <div class="field">
+      <label for="phase">Phase</label>
+      <select id="phase">
+        <option value="">Select phase</option>
+        <option>104</option>
+        <option>105</option>
+        <option>106</option>
+        <option>401B</option>
+        <option>402</option>
+        <option>403</option>
+        <option>404</option>
+        <option>601</option>
+        <option>602</option>
+        <option>603</option>
+        <option>605</option>
+      </select>
+    </div>
     <div class="row">
       <div class="field">
         <label for="block">Block</label>
@@ -504,6 +521,7 @@
 
   function resetForm(){
     document.getElementById('builderName').value = '';
+    document.getElementById('phase').value = '';
     document.getElementById('block').value = '';
     document.getElementById('lotNumber').value = '';
     document.getElementById('address').value = '';
@@ -580,6 +598,7 @@
     document.getElementById('prevMatchBanner').style.display = 'none';
 
     document.getElementById('builderName').value = entry.builder || '';
+    document.getElementById('phase').value = entry.phase || '';
     document.getElementById('block').value = entry.block || '';
     document.getElementById('lotNumber').value = entry.lot || '';
     document.getElementById('address').value = entry.address || '';
@@ -628,6 +647,7 @@
 
   function applyPrevEntry(prev){
     document.getElementById('builderName').value = prev.builder || '';
+    document.getElementById('phase').value = prev.phase || '';
     document.getElementById('block').value = prev.block || '';
     document.getElementById('lotNumber').value = prev.lot || '';
     document.getElementById('address').value = prev.address || '';
@@ -674,6 +694,7 @@
 
   document.getElementById('clearLoadedBtn').addEventListener('click', function(){
     document.getElementById('builderName').value = '';
+    document.getElementById('phase').value = '';
     document.getElementById('block').value = '';
     document.getElementById('violationNotes').value = '';
     itemsState = {};
@@ -702,6 +723,7 @@
     var entry = {
       id: id,
       builder: document.getElementById('builderName').value.trim(),
+      phase: document.getElementById('phase').value,
       block: document.getElementById('block').value.trim(),
       lot: lot,
       address: document.getElementById('address').value.trim(),
@@ -814,7 +836,8 @@
       return (e.lot||'').toLowerCase().indexOf(filter) !== -1 ||
              (e.block||'').toLowerCase().indexOf(filter) !== -1 ||
              (e.builder||'').toLowerCase().indexOf(filter) !== -1 ||
-             (e.address||'').toLowerCase().indexOf(filter) !== -1;
+             (e.address||'').toLowerCase().indexOf(filter) !== -1 ||
+             (e.phase||'').toLowerCase().indexOf(filter) !== -1;
     });
     if(!filtered.length){
       listEl.innerHTML = '<div class="empty">No inspections yet. Log your first one above.</div>';
@@ -828,7 +851,7 @@
       return '<div class="entry" data-id="'+e.id+'">' + img +
         '<div class="entry-body">' +
           '<div class="entry-top"><span class="lot-tag">' + escapeHtml(e.address || ('Blk ' + (e.block||'-') + ' Lot ' + e.lot)) + '</span><span class="entry-date">' + (e.date||'') + '</span></div>' +
-          '<div style="font-size:12px;color:var(--ink-faint);">Blk ' + escapeHtml(e.block||'-') + ' &middot; Lot ' + escapeHtml(e.lot) + (e.builder ? ' &middot; ' + escapeHtml(e.builder) : '') + '</div>' +
+          '<div style="font-size:12px;color:var(--ink-faint);">' + (e.phase ? 'Phase ' + escapeHtml(e.phase) + ' &middot; ' : '') + 'Blk ' + escapeHtml(e.block||'-') + ' &middot; Lot ' + escapeHtml(e.lot) + (e.builder ? ' &middot; ' + escapeHtml(e.builder) : '') + '</div>' +
           '<div class="badges">' + badges + '</div>' +
           '<div class="entry-actions"><button data-action="edit">Edit</button><button data-action="delete">Delete</button></div>' +
         '</div></div>';
@@ -894,7 +917,7 @@
     return 'Lot' + e.lot + '_' + e.date + '_item' + itemId + '.jpg';
   }
 
-  var CSV_HEADER = ['Builder Name','Block','Lot','Address','Date of Inspection','Violation Notes','Category','Item','Result','Remarks','Occurrence','Date of Latest Incident','Item Photo Filename','Main Photo Filename','Completion','Completion Remarks'];
+  var CSV_HEADER = ['Builder Name','Phase','Block','Lot','Address','Date of Inspection','Violation Notes','Category','Item','Result','Remarks','Occurrence','Date of Latest Incident','Item Photo Filename','Main Photo Filename','Completion','Completion Remarks'];
 
   function buildRows(delim, escapeFn){
     var rows = [];
@@ -903,7 +926,7 @@
         section.items.forEach(function(pair){
           var id = pair[0], label = pair[1];
           var st = (e.items && e.items[id]) || {};
-          rows.push([e.builder, e.block, e.lot, e.address, e.date, e.violationNotes, section.cat, label, st.result||'', st.remarks||'', st.occurrence||'', st.incidentDate||'', st.photo ? itemPhotoFilename(e,id) : '', e.mainPhoto ? mainPhotoFilename(e) : '', e.completion||'', e.completionRemarks||''].map(escapeFn).join(delim));
+          rows.push([e.builder, e.phase, e.block, e.lot, e.address, e.date, e.violationNotes, section.cat, label, st.result||'', st.remarks||'', st.occurrence||'', st.incidentDate||'', st.photo ? itemPhotoFilename(e,id) : '', e.mainPhoto ? mainPhotoFilename(e) : '', e.completion||'', e.completionRemarks||''].map(escapeFn).join(delim));
         });
       });
     });
@@ -1097,46 +1120,47 @@
     ws.getCell('A1').alignment = {vertical:'middle', horizontal:'center'};
     ws.getRow(1).height = 24;
 
-    ws.mergeCells('B2:C2'); ws.mergeCells('B5:C5'); ws.mergeCells('B6:C6');
+    ws.mergeCells('B2:C2'); ws.mergeCells('B6:C6'); ws.mergeCells('B7:C7');
     ws.getCell('A2').value = 'Builder Name'; ws.getCell('B2').value = latest.builder || '';
-    ws.getCell('A3').value = 'Block'; ws.getCell('B3').value = latest.block || '';
-    ws.getCell('A4').value = 'Lot'; ws.getCell('B4').value = latest.lot || '';
-    ws.getCell('A5').value = 'Address'; ws.getCell('B5').value = latest.address || '';
-    ws.getCell('A6').value = 'Last Inspected'; ws.getCell('B6').value = latest.date || '';
-    ws.mergeCells('A7:C7');
-    ws.getCell('A7').value = latest.violationNotes || '';
-    ws.getCell('A7').alignment = {wrapText:true, vertical:'top'};
-    ['A2','A3','A4','A5','A6'].forEach(function(addr){ ws.getCell(addr).font = {bold:true, color:{argb:BLUE_TEXT}}; });
-    for(var r=2;r<=7;r++){ ws.getRow(r).height = 18; }
+    ws.getCell('A3').value = 'Phase'; ws.getCell('B3').value = latest.phase || '';
+    ws.getCell('A4').value = 'Block'; ws.getCell('B4').value = latest.block || '';
+    ws.getCell('A5').value = 'Lot'; ws.getCell('B5').value = latest.lot || '';
+    ws.getCell('A6').value = 'Address'; ws.getCell('B6').value = latest.address || '';
+    ws.getCell('A7').value = 'Last Inspected'; ws.getCell('B7').value = latest.date || '';
+    ws.mergeCells('A8:C8');
+    ws.getCell('A8').value = latest.violationNotes || '';
+    ws.getCell('A8').alignment = {wrapText:true, vertical:'top'};
+    ['A2','A3','A4','A5','A6','A7'].forEach(function(addr){ ws.getCell(addr).font = {bold:true, color:{argb:BLUE_TEXT}}; });
+    for(var r=2;r<=8;r++){ ws.getRow(r).height = 18; }
 
-    styleBox(ws, 2, 4, 7, 6, PHOTO_FILL);
+    styleBox(ws, 2, 4, 8, 6, PHOTO_FILL);
     var photoCell = ws.getCell(2,4);
     photoCell.alignment = {vertical:'middle', horizontal:'center', wrapText:true};
     if(latest.mainPhoto){
       try{
         var b64 = latest.mainPhoto.split(',')[1];
         var imgId = workbook.addImage({base64:b64, extension:'jpeg'});
-        ws.addImage(imgId, {tl:{col:3, row:1.05}, br:{col:6, row:6.9}, editAs:'oneCell'});
+        ws.addImage(imgId, {tl:{col:3, row:1.05}, br:{col:6, row:7.9}, editAs:'oneCell'});
       }catch(e){ console.error('image embed failed', e); }
     }else{
       photoCell.value = 'Lot photo';
       photoCell.font = {italic:true, color:{argb:'FF9A968A'}};
     }
 
-    var cursor = 9;
+    var cursor = 10;
     cursor = addChecklistBlock(workbook, ws, latest, cursor);
 
     var maxRow = Math.max(cursor + 100, 500);
     ws.addConditionalFormatting({
-      ref: 'B9:B' + maxRow,
+      ref: 'B10:B' + maxRow,
       rules: [{ type:'containsText', operator:'containsText', text:'X', priority:1, style:{ font:{ color:{argb:'FF1B7A32'}, bold:true } } }]
     });
     ws.addConditionalFormatting({
-      ref: 'C9:C' + maxRow,
+      ref: 'C10:C' + maxRow,
       rules: [{ type:'containsText', operator:'containsText', text:'X', priority:1, style:{ font:{ color:{argb:'FFC23B2E'}, bold:true } } }]
     });
     ws.addConditionalFormatting({
-      ref: 'D9:D' + maxRow,
+      ref: 'D10:D' + maxRow,
       rules: [{ type:'containsText', operator:'containsText', text:'X', priority:1, style:{ font:{ color:{argb:'FF5B5E58'}, bold:true } } }]
     });
   }
