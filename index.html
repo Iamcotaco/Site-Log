@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Site Inspection Log</title>
+<style>
+  :root{
+    --navy:#16233F;
+    --orange:#E85D2C;
+    --orange-dark:#B8431A;
+    --gold:#F4C24A;
+    --gold-bg:#FCEFC9;
+    --paper:#FAFAF7;
+    --card:#FFFFFF;
+    --line:#E1DED4;
+    --ink:#1F2421;
+    --ink-soft:#5B5E58;
+    --ink-faint:#8B8C85;
+    --green:#2F8F4E;
+    --green-bg:#E7F4EB;
+    --red:#C23B2E;
+    --red-bg:#FBE7E4;
+    --gray-bg:#F1EFE8;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding-bottom:60px;}
+  header{background:var(--navy);color:#fff;padding:18px 16px 16px;position:sticky;top:0;z-index:10;box-shadow:0 2px 6px rgba(0,0,0,0.12);}
+  .brand{display:flex;align-items:baseline;justify-content:space-between;}
+  .brand h1{margin:0;font-family:'Arial Narrow',Helvetica,sans-serif;font-weight:700;letter-spacing:0.06em;font-size:20px;text-transform:uppercase;}
+  .brand h1 span{color:var(--orange);}
+  .brand small{color:#B9C2D6;font-size:11px;}
+  .stats{display:flex;gap:16px;margin-top:10px;font-size:12px;color:#C7CEDF;}
+  .stats b{color:#fff;font-size:14px;display:block;}
+  main{max-width:640px;margin:0 auto;padding:16px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:16px;}
+  .card h2{margin:0 0 14px;font-size:13px;text-transform:uppercase;letter-spacing:0.08em;color:var(--ink-faint);font-weight:700;border-bottom:1px solid var(--line);padding-bottom:10px;}
+  .row{display:flex;gap:10px;}
+  .field{margin-bottom:12px;flex:1;}
+  label{display:block;font-size:12px;font-weight:600;color:var(--ink-soft);margin-bottom:4px;}
+  input[type=text],input[type=number],input[type=date],select,textarea{width:100%;padding:10px 11px;border:1px solid var(--line);border-radius:8px;font-size:15px;background:#fff;color:var(--ink);font-family:inherit;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 3px rgba(232,93,44,0.15);}
+  textarea{resize:vertical;min-height:50px;}
+  .err{color:var(--red);font-size:12.5px;margin-top:4px;display:none;}
+  .err.show{display:block;}
+  .photo-box{border:2px dashed var(--line);border-radius:8px;padding:14px;text-align:center;background:#fcfbf8;}
+  .photo-box.has-photo{padding:0;border-style:solid;overflow:hidden;}
+  .photo-box img{width:100%;display:block;max-height:220px;object-fit:cover;}
+  .photo-box .hint{font-size:13px;color:var(--ink-faint);}
+  .photo-box .hint i{display:block;font-size:22px;margin-bottom:6px;}
+  .photo-btn-row{display:flex;gap:8px;margin-top:8px;}
+  .photo-btn-row .btn{flex:1;}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 16px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);font-size:14px;font-weight:600;cursor:pointer;}
+  .btn-block{width:100%;}
+  .btn-primary{background:var(--orange);border-color:var(--orange-dark);color:#fff;}
+  .btn-sm{padding:6px 10px;font-size:12px;}
+
+  details.category{border:1px solid var(--line);border-radius:8px;margin-bottom:8px;overflow:hidden;}
+  details.category[open] summary{border-bottom:1px solid var(--line);}
+  summary{list-style:none;cursor:pointer;padding:11px 12px;background:var(--gold-bg);display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:13.5px;color:#7A5A0E;}
+  summary::-webkit-details-marker{display:none;}
+  summary .prog{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:#fff;color:var(--ink-faint);}
+  .item{padding:10px 12px;border-bottom:1px solid var(--line);}
+  .item:last-child{border-bottom:none;}
+  .item-label{font-size:13.5px;font-weight:600;margin-bottom:6px;}
+  .seg3{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:6px;}
+  .seg3 button{flex:1;border:none;background:#fff;padding:8px 4px;font-size:12.5px;font-weight:700;color:var(--ink-soft);border-right:1px solid var(--line);cursor:pointer;}
+  .seg3 button:last-child{border-right:none;}
+  .seg3 button.active[data-v="Good"]{background:var(--green-bg);color:var(--green);}
+  .seg3 button.active[data-v="Bad"]{background:var(--red-bg);color:var(--red);}
+  .seg3 button.active[data-v="N/A"]{background:var(--gray-bg);color:var(--ink-soft);}
+  .item-remarks{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px;font-family:inherit;margin-bottom:6px;}
+  .violation-fields{background:var(--red-bg);border-radius:6px;padding:8px;margin-top:4px;display:none;}
+  .violation-fields.show{display:block;}
+  .violation-row{display:flex;gap:8px;margin-bottom:6px;}
+  .violation-row .vfield{flex:1;}
+  .violation-row label{font-size:10.5px;margin-bottom:2px;color:var(--red);}
+  .violation-row input{padding:6px 8px;font-size:12.5px;border-color:#EAB8B0;}
+  .photo-mini-btn{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:6px 9px;border-radius:6px;border:1px solid #EAB8B0;background:#fff;color:var(--red);cursor:pointer;}
+  .photo-mini-thumb{width:40px;height:40px;border-radius:5px;object-fit:cover;vertical-align:middle;margin-left:6px;}
+
+  .toolbar{display:flex;gap:8px;margin-bottom:14px;}
+  .toolbar input{flex:1;}
+  .entry{border:1px solid var(--line);border-radius:var(--radius);background:#fff;padding:12px;margin-bottom:10px;display:flex;gap:12px;}
+  .entry img{width:70px;height:70px;border-radius:6px;object-fit:cover;flex-shrink:0;background:#eee;}
+  .entry .noimg{width:70px;height:70px;border-radius:6px;flex-shrink:0;background:var(--gray-bg);color:var(--ink-faint);display:flex;align-items:center;justify-content:center;font-size:10.5px;text-align:center;}
+  .entry-body{flex:1;min-width:0;}
+  .entry-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
+  .lot-tag{font-family:'Arial Narrow',Helvetica,sans-serif;font-weight:800;font-size:16px;color:var(--navy);transform:rotate(-1deg);display:inline-block;}
+  .entry-date{font-size:12px;color:var(--ink-faint);white-space:nowrap;}
+  .badges{display:flex;gap:6px;margin:6px 0;flex-wrap:wrap;}
+  .badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;}
+  .badge.ok{background:var(--green-bg);color:var(--green);}
+  .badge.bad{background:var(--red-bg);color:var(--red);}
+  .entry-actions{display:flex;gap:10px;margin-top:4px;}
+  .entry-actions button{background:none;border:none;color:var(--ink-faint);font-size:12px;cursor:pointer;padding:0;font-weight:600;}
+  .entry-actions button[data-action="edit"]{color:var(--navy);}
+  .entry-actions button[data-action="delete"]:hover{color:var(--red);}
+  .empty{text-align:center;color:var(--ink-faint);font-size:13px;padding:30px 10px;}
+  .export-row{display:flex;gap:10px;}
+  .export-row .btn{flex:1;}
+  .loading{text-align:center;padding:20px;color:var(--ink-faint);font-size:13px;}
+  .completion-toggle{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+  .completion-toggle button{flex:1;border:none;background:#fff;padding:10px;font-size:13px;font-weight:700;color:var(--ink-soft);border-right:1px solid var(--line);cursor:pointer;}
+  .completion-toggle button:last-child{border-right:none;}
+  .completion-toggle button.active{background:var(--navy);color:#fff;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>Site<span>Inspect</span></h1>
+    <small>Builder cleanliness log</small>
+  </div>
+  <div class="stats">
+    <div><b id="statEntries">0</b>inspections</div>
+    <div><b id="statLots">0</b>distinct lots</div>
+    <div><b id="statIssues">0</b>open issues</div>
+  </div>
+</header>
+
+<main>
+
+  <div class="card">
+    <h2>Inspection details</h2>
+    <div id="editBanner" style="display:none;align-items:center;justify-content:space-between;gap:8px;background:#EAEDF4;border:1px solid #C9D2E8;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;">
+      <span id="editBannerText"></span>
+      <button type="button" class="btn btn-sm" id="cancelEditBtn">Cancel edit</button>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="builderName">Builder name</label>
+        <input type="text" id="builderName" list="builderList" placeholder="Builder name">
+        <datalist id="builderList"></datalist>
+      </div>
+      <div class="field">
+        <label for="inspectionDate">Date of inspection</label>
+        <input type="date" id="inspectionDate">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="block">Block</label>
+        <input type="text" id="block" placeholder="Block #">
+      </div>
+      <div class="field">
+        <label for="lotNumber">Lot</label>
+        <input type="text" id="lotNumber" list="lotList" placeholder="Lot #">
+        <datalist id="lotList"></datalist>
+        <div class="err" id="lotErr">Enter a lot number before saving.</div>
+      </div>
+    </div>
+    <div id="prevMatchBanner" style="display:none;background:var(--gold-bg);border:1px solid #EAD9A0;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;">
+      <span id="prevMatchText"></span>
+      <button type="button" class="btn btn-sm" id="clearLoadedBtn" style="margin-left:6px;">Clear &amp; start fresh</button>
+    </div>
+    <div class="field">
+      <label for="address">Address</label>
+      <input type="text" id="address" list="addressList" placeholder="Street address">
+      <datalist id="addressList"></datalist>
+      <div class="err" id="addressErr">Enter an address before saving.</div>
+    </div>
+    <div class="field">
+      <label for="violationNotes">Violation notes</label>
+      <textarea id="violationNotes" placeholder="e.g. No violations listed, or details of any notice sent"></textarea>
+    </div>
+    <div class="field">
+      <label>Lot photo</label>
+      <div class="photo-box" id="mainPhotoBox">
+        <div class="hint"><i>+</i>No photo yet</div>
+      </div>
+      <div class="photo-btn-row">
+        <button type="button" class="btn btn-sm" id="mainPhotoCameraBtn">Take photo</button>
+        <button type="button" class="btn btn-sm" id="mainPhotoLibraryBtn">Choose from library</button>
+      </div>
+      <input type="file" id="mainPhotoInputCamera" accept="image/*" capture="environment" style="display:none;">
+      <input type="file" id="mainPhotoInputLibrary" accept="image/*" style="display:none;">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Checklist</h2>
+    <div id="checklistWrap"></div>
+  </div>
+
+  <div class="card">
+    <h2>Completion</h2>
+    <div class="completion-toggle" id="completionToggle">
+      <button type="button" data-v="Substantial Completion">Substantial completion</button>
+      <button type="button" data-v="Incomplete">Incomplete</button>
+    </div>
+    <div class="field" style="margin-top:10px;">
+      <label for="completionRemarks">Remarks</label>
+      <textarea id="completionRemarks" placeholder="Optional remarks"></textarea>
+    </div>
+    <button class="btn btn-primary btn-block" id="saveBtn" style="margin-top:6px;">Save inspection</button>
+    <div id="saveStatus" style="text-align:center;font-size:12px;color:var(--green);margin-top:8px;display:none;">Saved.</div>
+  </div>
+
+  <div class="card">
+    <h2>Inspection history</h2>
+    <div class="toolbar">
+      <input type="text" id="searchBox" placeholder="Filter by address, lot, block, or builder">
+      <button class="btn btn-sm" id="refreshBtn">Refresh</button>
+    </div>
+    <div id="entriesList"><div class="loading">Loading entries...</div></div>
+  </div>
+
+  <div class="card">
+    <h2>Export for report</h2>
+    <p style="font-size:13px;color:var(--ink-soft);margin-top:0;">One tab per lot, with every inspection stacked chronologically underneath the last — so each export is the full up-to-date history, not a pile of duplicate tabs. Photos are named by lot, date, and item so they match automatically.</p>
+    <p style="font-size:12px;color:var(--ink-faint);background:var(--gray-bg);padding:8px 10px;border-radius:6px;">To get a real Google Sheet: save the download to Drive, open it with Google Sheets, then tap &#8942; &rarr; "Save as Google Sheets."</p>
+    <div class="export-row">
+      <button class="btn" id="exportXlsxBtn">Download Excel report</button>
+      <button class="btn" id="exportZipBtn">Download photos (.zip)</button>
+    </div>
+    <button class="btn btn-block" id="copyCsvBtn" style="margin-top:10px;">Copy table (paste into Sheets)</button>
+    <div id="exportStatus" style="text-align:center;font-size:12px;color:var(--ink-faint);margin-top:8px;"></div>
+  </div>
+
+  <div class="card">
+    <h2>Backup &amp; transfer</h2>
+    <p style="font-size:13px;color:var(--ink-soft);margin-top:0;">This data lives only in this browser on this device. On iPhone, use Copy/Paste below — it's more reliable than file downloads in Safari.</p>
+    <div class="export-row">
+      <button class="btn" id="copyBackupBtn">Copy backup to clipboard</button>
+      <button class="btn" id="pasteBackupBtn">Paste backup to import</button>
+    </div>
+    <div id="pasteBackupBox" style="display:none;margin-top:10px;">
+      <textarea id="pasteBackupText" placeholder="Paste backup text here" style="min-height:100px;"></textarea>
+      <button class="btn btn-block" id="pasteBackupSubmit" style="margin-top:8px;">Import pasted backup</button>
+    </div>
+    <div class="export-row" style="margin-top:10px;">
+      <button class="btn" id="exportBackupBtn">Download backup file (.json)</button>
+      <button class="btn" id="importBackupBtn">Import backup file (.json)</button>
+    </div>
+    <input type="file" id="importBackupInput" accept="application/json,.json" style="display:none;">
+  </div>
+
+  <p style="font-size:11.5px;color:var(--ink-faint);text-align:center;">Runs entirely in this browser — no account, Claude plan, or internet connection required for your data. Export a backup regularly.</p>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script>
+(function(){
+  var toastEl = document.createElement('div');
+  toastEl.id = 'appToast';
+  toastEl.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#16233F;color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,0.25);z-index:999;opacity:0;transition:opacity .2s, transform .2s;pointer-events:none;max-width:88%;text-align:center;';
+  document.body.appendChild(toastEl);
+  var toastTimer = null;
+  function showToast(msg){
+    toastEl.textContent = msg;
+    toastEl.style.opacity = '1';
+    toastEl.style.transform = 'translateX(-50%) translateY(0)';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){
+      toastEl.style.opacity = '0';
+      toastEl.style.transform = 'translateX(-50%) translateY(20px)';
+    }, Math.min(6000, Math.max(2600, msg.length * 60)));
+  }
+
+  var DB_NAME = 'sitelog_db';
+  var STORE_NAME = 'kv';
+  function openDB(){
+    return new Promise(function(resolve, reject){
+      var req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = function(e){
+        var db = e.target.result;
+        if(!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);
+      };
+      req.onsuccess = function(e){ resolve(e.target.result); };
+      req.onerror = function(e){ reject(e.target.error); };
+    });
+  }
+  var localDB = {
+    set: function(key, value){
+      return openDB().then(function(db){
+        return new Promise(function(resolve, reject){
+          var tx = db.transaction(STORE_NAME, 'readwrite');
+          tx.objectStore(STORE_NAME).put(value, key);
+          tx.oncomplete = function(){ resolve({key:key, value:value}); };
+          tx.onerror = function(){ reject(tx.error); };
+        });
+      });
+    },
+    get: function(key){
+      return openDB().then(function(db){
+        return new Promise(function(resolve, reject){
+          var tx = db.transaction(STORE_NAME, 'readonly');
+          var req = tx.objectStore(STORE_NAME).get(key);
+          req.onsuccess = function(){
+            if(req.result === undefined) reject(new Error('not found'));
+            else resolve({key:key, value:req.result});
+          };
+          req.onerror = function(){ reject(req.error); };
+        });
+      });
+    },
+    delete: function(key){
+      return openDB().then(function(db){
+        return new Promise(function(resolve, reject){
+          var tx = db.transaction(STORE_NAME, 'readwrite');
+          tx.objectStore(STORE_NAME).delete(key);
+          tx.oncomplete = function(){ resolve({key:key, deleted:true}); };
+          tx.onerror = function(){ reject(tx.error); };
+        });
+      });
+    },
+    list: function(prefix){
+      return openDB().then(function(db){
+        return new Promise(function(resolve, reject){
+          var tx = db.transaction(STORE_NAME, 'readonly');
+          var store = tx.objectStore(STORE_NAME);
+          var keys = [];
+          var req = (store.openKeyCursor || store.openCursor).call(store);
+          req.onsuccess = function(e){
+            var cursor = e.target.result;
+            if(cursor){
+              if(!prefix || String(cursor.key).indexOf(prefix) === 0) keys.push(cursor.key);
+              cursor.continue();
+            }else{
+              resolve({keys:keys});
+            }
+          };
+          req.onerror = function(){ reject(req.error); };
+        });
+      });
+    }
+  };
+
+  var CHECKLIST = [
+    {cat:"Builder Sign", items:[[1,"Maximum of one builder sign located on lot"]]},
+    {cat:"Fence", items:[[2,"Silt fence installed"],[3,"Intact, good condition"]]},
+    {cat:"Curb Inlet", items:[[4,"Curb inlet installed"],[5,"Free of debris"],[6,"Covers entire length of inlet"]]},
+    {cat:"Trash Container", items:[[7,"Trash contained properly"],[8,"Address marked on container"],[9,"Container at least 4' x 8'"]]},
+    {cat:"Storage of Materials", items:[[11,"Stored in orderly fashion"],[12,"Excavation materials / dirt work stored orderly"]]},
+    {cat:"Grass", items:[[13,"Grass cut in low laying manner"],[14,"Dumping on empty lots"]]},
+    {cat:"Location of Equipment", items:[[15,"Is there any equipment parked on the street"]]},
+    {cat:"Street Condition", items:[[16,"Street clean of mud and debris"],[17,"Sidewalk in excellent condition"],[18,"Oil leaks from equipment"],[19,"Area maintained and clean of concrete spills"]]},
+    {cat:"Parked Vehicles", items:[[20,"Vehicles only parked on one side of street"]]},
+    {cat:"Port-a-Can", items:[[21,"Port-a-can being used by builder"],[22,"Clean maintained appearance"]]},
+    {cat:"Miscellaneous", items:[[24,"Proper driveway"],[25,"Misc."],[26,"Fence stain"],[27,"Landscape"]]}
+  ];
+
+  var itemsState = {};
+  var mainPhotoDataUrl = null;
+  var completionVal = "";
+  var allEntries = [];
+
+  document.getElementById('inspectionDate').valueAsDate = new Date();
+
+  function buildChecklistHtml(){
+    var html = '';
+    CHECKLIST.forEach(function(section, si){
+      html += '<details class="category"' + (si===0?' open':'') + '>';
+      html += '<summary>' + section.cat + '<span class="prog" data-cat="' + section.cat + '">0/' + section.items.length + '</span></summary>';
+      section.items.forEach(function(pair){
+        var id = pair[0], label = pair[1];
+        html += '<div class="item" data-item="' + id + '">';
+        html += '<div class="item-label">' + id + '. ' + label + '</div>';
+        html += '<div class="seg3" data-item="' + id + '">';
+        html += '<button type="button" data-v="Good">Good</button>';
+        html += '<button type="button" data-v="Bad">Bad</button>';
+        html += '<button type="button" data-v="N/A">N/A</button>';
+        html += '</div>';
+        html += '<input type="text" class="item-remarks" data-item="' + id + '" placeholder="Remarks (optional)">';
+        html += '<div class="violation-fields" data-item="' + id + '">';
+        html += '<div class="violation-row">';
+        html += '<div class="vfield"><label>Occurrence #</label><input type="number" min="1" class="v-occurrence" data-item="' + id + '"></div>';
+        html += '<div class="vfield"><label>Date of latest incident</label><input type="date" class="v-date" data-item="' + id + '"></div>';
+        html += '</div>';
+        html += '<label style="display:block;margin-bottom:4px;">Photo</label>';
+        html += '<label class="photo-mini-btn"><i class="ph-icon">+</i>Camera<input type="file" accept="image/*" capture="environment" class="v-photo-input" data-item="' + id + '" style="display:none;"></label> ';
+        html += '<label class="photo-mini-btn"><i class="ph-icon">+</i>Library<input type="file" accept="image/*" class="v-photo-input" data-item="' + id + '" style="display:none;"></label>';
+        html += '<span class="v-photo-thumb-wrap" data-item="' + id + '"></span>';
+        html += '</div>';
+        html += '</div>';
+      });
+      html += '</details>';
+    });
+    return html;
+  }
+  document.getElementById('checklistWrap').innerHTML = buildChecklistHtml();
+
+  function getState(id){
+    if(!itemsState[id]) itemsState[id] = {result:'', remarks:'', occurrence:'', incidentDate:'', photo:null};
+    return itemsState[id];
+  }
+
+  function applyChecklistDefaults(){
+    var defaults = {
+      1:'Good',
+      2:'N/A', 3:'N/A',
+      4:'N/A', 5:'N/A', 6:'N/A',
+      7:'Good', 8:'Good', 9:'Good',
+      11:'N/A', 12:'N/A',
+      13:'N/A', 14:'N/A',
+      15:'Good',
+      16:'Good', 17:'Good', 18:'Good', 19:'Good',
+      20:'Good',
+      21:'N/A', 22:'N/A',
+      24:'N/A', 25:'N/A', 26:'N/A', 27:'N/A'
+    };
+    Object.keys(defaults).forEach(function(id){
+      var st = getState(id);
+      if(!st.result) st.result = defaults[id];
+    });
+  }
+  applyChecklistDefaults();
+  syncChecklistUIFromState();
+
+  function updateProgress(){
+    CHECKLIST.forEach(function(section){
+      var done = section.items.filter(function(p){ return getState(p[0]).result; }).length;
+      var el = document.querySelector('.prog[data-cat="' + section.cat + '"]');
+      if(el) el.textContent = done + '/' + section.items.length;
+    });
+  }
+
+  document.getElementById('checklistWrap').addEventListener('click', function(e){
+    var btn = e.target.closest('.seg3 button');
+    if(!btn) return;
+    var wrap = btn.closest('.seg3');
+    var id = wrap.dataset.item;
+    var v = btn.dataset.v;
+    var st = getState(id);
+    st.result = v;
+    Array.prototype.forEach.call(wrap.children, function(b){
+      b.classList.toggle('active', b.dataset.v === v);
+    });
+    var vf = document.querySelector('.violation-fields[data-item="' + id + '"]');
+    vf.classList.toggle('show', v === 'Bad');
+    updateProgress();
+  });
+
+  document.getElementById('checklistWrap').addEventListener('input', function(e){
+    if(e.target.classList.contains('item-remarks')){
+      getState(e.target.dataset.item).remarks = e.target.value;
+    }else if(e.target.classList.contains('v-occurrence')){
+      getState(e.target.dataset.item).occurrence = e.target.value;
+    }else if(e.target.classList.contains('v-date')){
+      getState(e.target.dataset.item).incidentDate = e.target.value;
+    }
+  });
+
+  document.getElementById('checklistWrap').addEventListener('change', function(e){
+    if(!e.target.classList.contains('v-photo-input')) return;
+    var id = e.target.dataset.item;
+    var file = e.target.files[0];
+    if(!file) return;
+    compressImage(file, function(dataUrl){
+      getState(id).photo = dataUrl;
+      var thumbWrap = document.querySelector('.v-photo-thumb-wrap[data-item="' + id + '"]');
+      thumbWrap.innerHTML = '<img class="photo-mini-thumb" src="' + dataUrl + '">';
+    });
+  });
+
+  function compressImage(file, cb, maxW, quality){
+    maxW = maxW || 950;
+    quality = quality || 0.6;
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var img = new Image();
+      img.onload = function(){
+        var scale = Math.min(1, maxW / img.width);
+        var canvas = document.createElement('canvas');
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        cb(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  var mainPhotoBox = document.getElementById('mainPhotoBox');
+  var mainPhotoInputCamera = document.getElementById('mainPhotoInputCamera');
+  var mainPhotoInputLibrary = document.getElementById('mainPhotoInputLibrary');
+  document.getElementById('mainPhotoCameraBtn').addEventListener('click', function(){ mainPhotoInputCamera.click(); });
+  document.getElementById('mainPhotoLibraryBtn').addEventListener('click', function(){ mainPhotoInputLibrary.click(); });
+  function handleMainPhotoFile(file){
+    if(!file) return;
+    compressImage(file, function(dataUrl){
+      mainPhotoDataUrl = dataUrl;
+      mainPhotoBox.classList.add('has-photo');
+      mainPhotoBox.innerHTML = '<img src="' + dataUrl + '">';
+    });
+  }
+  mainPhotoInputCamera.addEventListener('change', function(){ handleMainPhotoFile(mainPhotoInputCamera.files[0]); });
+  mainPhotoInputLibrary.addEventListener('change', function(){ handleMainPhotoFile(mainPhotoInputLibrary.files[0]); });
+
+  document.getElementById('completionToggle').addEventListener('click', function(e){
+    if(e.target.tagName !== 'BUTTON') return;
+    completionVal = e.target.dataset.v;
+    Array.prototype.forEach.call(e.currentTarget.children, function(b){
+      b.classList.toggle('active', b.dataset.v === completionVal);
+    });
+  });
+
+  function resetForm(){
+    document.getElementById('builderName').value = '';
+    document.getElementById('block').value = '';
+    document.getElementById('lotNumber').value = '';
+    document.getElementById('address').value = '';
+    document.getElementById('violationNotes').value = '';
+    document.getElementById('inspectionDate').valueAsDate = new Date();
+    document.getElementById('completionRemarks').value = '';
+    completionVal = '';
+    Array.prototype.forEach.call(document.getElementById('completionToggle').children, function(b){ b.classList.remove('active'); });
+    mainPhotoDataUrl = null;
+    mainPhotoBox.classList.remove('has-photo');
+    mainPhotoBox.innerHTML = '<div class="hint"><i>+</i>No photo yet</div>';
+    mainPhotoInputCamera.value = '';
+    mainPhotoInputLibrary.value = '';
+    itemsState = {};
+    document.getElementById('checklistWrap').innerHTML = buildChecklistHtml();
+    applyChecklistDefaults();
+    syncChecklistUIFromState();
+    document.getElementById('prevMatchBanner').style.display = 'none';
+    document.getElementById('lotErr').classList.remove('show');
+    document.getElementById('addressErr').classList.remove('show');
+    autoLoadedKey = null;
+    exitEditMode();
+  }
+
+  function findLatestEntryForLot(lot, block){
+    var normLot = lot.trim().toLowerCase();
+    var normBlock = (block || '').trim().toLowerCase();
+    if(!normLot || !normBlock) return null;
+    var matches = allEntries.filter(function(e){
+      return (e.lot||'').trim().toLowerCase() === normLot && (e.block||'').trim().toLowerCase() === normBlock;
+    });
+    if(!matches.length) return null;
+    matches.sort(function(a,b){ return b.savedAt - a.savedAt; });
+    return matches[0];
+  }
+
+  function findLatestEntryForAddress(address){
+    var norm = address.trim().toLowerCase();
+    if(!norm) return null;
+    var matches = allEntries.filter(function(e){ return (e.address||'').trim().toLowerCase() === norm; });
+    if(!matches.length) return null;
+    matches.sort(function(a,b){ return b.savedAt - a.savedAt; });
+    return matches[0];
+  }
+
+  function syncChecklistUIFromState(){
+    Object.keys(itemsState).forEach(function(id){
+      var st = itemsState[id];
+      if(!st.result) return;
+      var wrap = document.querySelector('.seg3[data-item="' + id + '"]');
+      if(!wrap) return;
+      Array.prototype.forEach.call(wrap.children, function(b){ b.classList.toggle('active', b.dataset.v === st.result); });
+      var remarksInput = document.querySelector('.item-remarks[data-item="' + id + '"]');
+      if(remarksInput) remarksInput.value = st.remarks || '';
+      var vf = document.querySelector('.violation-fields[data-item="' + id + '"]');
+      if(vf) vf.classList.toggle('show', st.result === 'Bad');
+      var occ = document.querySelector('.v-occurrence[data-item="' + id + '"]');
+      if(occ) occ.value = st.occurrence || '';
+      var dt = document.querySelector('.v-date[data-item="' + id + '"]');
+      if(dt) dt.value = st.incidentDate || '';
+      var thumbWrap = document.querySelector('.v-photo-thumb-wrap[data-item="' + id + '"]');
+      if(thumbWrap) thumbWrap.innerHTML = st.photo ? '<img class="photo-mini-thumb" src="' + st.photo + '">' : '';
+    });
+    updateProgress();
+  }
+
+  var matchedPrevEntry = null;
+  var autoLoadedKey = null;
+  var editingEntryId = null;
+
+  function loadEntryForEdit(entry){
+    editingEntryId = entry.id;
+    autoLoadedKey = null;
+    document.getElementById('prevMatchBanner').style.display = 'none';
+
+    document.getElementById('builderName').value = entry.builder || '';
+    document.getElementById('block').value = entry.block || '';
+    document.getElementById('lotNumber').value = entry.lot || '';
+    document.getElementById('address').value = entry.address || '';
+    document.getElementById('inspectionDate').value = entry.date || '';
+    document.getElementById('violationNotes').value = entry.violationNotes || '';
+    document.getElementById('completionRemarks').value = entry.completionRemarks || '';
+
+    completionVal = entry.completion || '';
+    Array.prototype.forEach.call(document.getElementById('completionToggle').children, function(b){
+      b.classList.toggle('active', b.dataset.v === completionVal);
+    });
+
+    mainPhotoDataUrl = entry.mainPhoto || null;
+    if(mainPhotoDataUrl){
+      mainPhotoBox.classList.add('has-photo');
+      mainPhotoBox.innerHTML = '<img src="' + mainPhotoDataUrl + '">';
+    }else{
+      mainPhotoBox.classList.remove('has-photo');
+      mainPhotoBox.innerHTML = '<div class="hint"><i>+</i>No photo yet</div>';
+    }
+
+    itemsState = {};
+    Object.keys(entry.items || {}).forEach(function(id){
+      var st = entry.items[id];
+      itemsState[id] = {
+        result: st.result || '',
+        remarks: st.remarks || '',
+        occurrence: st.occurrence || '',
+        incidentDate: st.incidentDate || '',
+        photo: st.photo || null
+      };
+    });
+    syncChecklistUIFromState();
+
+    document.getElementById('editBanner').style.display = 'flex';
+    document.getElementById('editBannerText').textContent = 'Editing inspection from ' + (entry.date || '') + ' for ' + (entry.address || ('Lot ' + entry.lot)) + '.';
+    document.getElementById('saveBtn').textContent = 'Update inspection';
+    document.querySelector('.card h2').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  function exitEditMode(){
+    editingEntryId = null;
+    document.getElementById('editBanner').style.display = 'none';
+    document.getElementById('saveBtn').textContent = 'Save inspection';
+  }
+
+  function applyPrevEntry(prev){
+    document.getElementById('builderName').value = prev.builder || '';
+    document.getElementById('block').value = prev.block || '';
+    document.getElementById('lotNumber').value = prev.lot || '';
+    document.getElementById('address').value = prev.address || '';
+    document.getElementById('violationNotes').value = '';
+
+    itemsState = {};
+    Object.keys(prev.items || {}).forEach(function(id){
+      var st = prev.items[id];
+      itemsState[id] = {
+        result: st.result || '',
+        remarks: st.remarks || '',
+        occurrence: st.result === 'Bad' && st.occurrence ? String(Number(st.occurrence) + 1) : '',
+        incidentDate: '',
+        photo: null
+      };
+    });
+    syncChecklistUIFromState();
+  }
+
+  function checkForMatch(){
+    var addr = document.getElementById('address').value.trim();
+    var lot = document.getElementById('lotNumber').value.trim();
+    var block = document.getElementById('block').value.trim();
+    var banner = document.getElementById('prevMatchBanner');
+    var prev = (addr && findLatestEntryForAddress(addr)) || (lot && block && findLatestEntryForLot(lot, block)) || null;
+    matchedPrevEntry = prev;
+    if(prev){
+      var key = prev.id;
+      if(autoLoadedKey !== key){
+        applyPrevEntry(prev);
+        autoLoadedKey = key;
+      }
+      document.getElementById('prevMatchText').textContent = 'Loaded the last inspection for ' + (prev.address || ('Block ' + prev.block + ' Lot ' + prev.lot)) + ' — last visited ' + (prev.date || '') + '. Take a new photo and adjust anything that changed.';
+      banner.style.display = 'block';
+    }else{
+      autoLoadedKey = null;
+      banner.style.display = 'none';
+    }
+  }
+
+  document.getElementById('lotNumber').addEventListener('change', checkForMatch);
+  document.getElementById('address').addEventListener('change', checkForMatch);
+  document.getElementById('block').addEventListener('change', checkForMatch);
+
+  document.getElementById('clearLoadedBtn').addEventListener('click', function(){
+    document.getElementById('builderName').value = '';
+    document.getElementById('block').value = '';
+    document.getElementById('violationNotes').value = '';
+    itemsState = {};
+    document.getElementById('checklistWrap').innerHTML = buildChecklistHtml();
+    applyChecklistDefaults();
+    syncChecklistUIFromState();
+    autoLoadedKey = 'cleared';
+    document.getElementById('prevMatchBanner').style.display = 'none';
+  });
+
+  async function saveEntry(){
+    var lot = document.getElementById('lotNumber').value.trim();
+    var address = document.getElementById('address').value.trim();
+    var lotErrEl = document.getElementById('lotErr');
+    var addressErrEl = document.getElementById('addressErr');
+    var hasError = false;
+    if(!lot){ lotErrEl.classList.add('show'); hasError = true; }else{ lotErrEl.classList.remove('show'); }
+    if(!address){ addressErrEl.classList.add('show'); hasError = true; }else{ addressErrEl.classList.remove('show'); }
+    if(hasError){
+      showToast('Please fill in the highlighted fields before saving.');
+      return;
+    }
+
+    var isEditing = !!editingEntryId;
+    var id = isEditing ? editingEntryId : ('insp_' + Date.now() + '_' + Math.random().toString(36).slice(2,8));
+    var entry = {
+      id: id,
+      builder: document.getElementById('builderName').value.trim(),
+      block: document.getElementById('block').value.trim(),
+      lot: lot,
+      address: document.getElementById('address').value.trim(),
+      date: document.getElementById('inspectionDate').value,
+      violationNotes: document.getElementById('violationNotes').value.trim(),
+      mainPhoto: mainPhotoDataUrl,
+      completion: completionVal,
+      completionRemarks: document.getElementById('completionRemarks').value.trim(),
+      items: itemsState,
+      savedAt: Date.now()
+    };
+
+    var saveBtn = document.getElementById('saveBtn');
+    var payload = JSON.stringify(entry);
+    var approxBytes = payload.length;
+    if(approxBytes > 4.5 * 1024 * 1024){
+      showToast('This inspection is too large to save (' + Math.round(approxBytes/1024/1024*10)/10 + 'MB). Remove a photo or retake with less detail, then try again.');
+      return;
+    }
+    saveBtn.disabled = true;
+    saveBtn.textContent = isEditing ? 'Updating...' : 'Saving...';
+    try{
+      await localDB.set('insp:' + id, payload);
+      if(isEditing){
+        allEntries = allEntries.map(function(x){ return x.id === id ? entry : x; });
+      }else{
+        allEntries.unshift(entry);
+      }
+      renderEntries();
+      renderStats();
+      updateDatalists();
+      var wasEditing = isEditing;
+      resetForm();
+      var status = document.getElementById('saveStatus');
+      status.textContent = wasEditing ? 'Updated.' : 'Saved.';
+      status.style.display = 'block';
+      setTimeout(function(){ status.style.display = 'none'; status.textContent = 'Saved.'; }, 2000);
+    }catch(err){
+      var detail = (err && (err.message || err.toString())) || 'unknown error';
+      showToast('Could not save: ' + detail);
+      console.error(err);
+    }
+    saveBtn.disabled = false;
+    saveBtn.textContent = 'Save inspection';
+  }
+  document.getElementById('saveBtn').addEventListener('click', saveEntry);
+  document.getElementById('cancelEditBtn').addEventListener('click', function(){
+    resetForm();
+    showToast('Edit cancelled.');
+  });
+
+  async function loadEntries(){
+    var listEl = document.getElementById('entriesList');
+    listEl.innerHTML = '<div class="loading">Loading entries...</div>';
+    try{
+      var listResult = await localDB.list('insp:');
+      var keys = (listResult && listResult.keys) || [];
+      var results = await Promise.all(keys.map(function(k){
+        return localDB.get(k).catch(function(){ return null; });
+      }));
+      allEntries = results.filter(Boolean).map(function(r){
+        try{ return JSON.parse(r.value); }catch(e){ return null; }
+      }).filter(Boolean);
+      allEntries.sort(function(a,b){ return b.savedAt - a.savedAt; });
+      renderEntries();
+      renderStats();
+      updateDatalists();
+    }catch(err){
+      listEl.innerHTML = '<div class="empty">Could not load entries. Refresh to try again.</div>';
+      console.error(err);
+    }
+  }
+
+  function countBad(entry){
+    var n = 0;
+    Object.keys(entry.items || {}).forEach(function(k){ if(entry.items[k].result === 'Bad') n++; });
+    return n;
+  }
+
+  function renderStats(){
+    document.getElementById('statEntries').textContent = allEntries.length;
+    var lots = {};
+    var issues = 0;
+    allEntries.forEach(function(e){ lots[e.block + '-' + e.lot] = true; issues += countBad(e); });
+    document.getElementById('statLots').textContent = Object.keys(lots).length;
+    document.getElementById('statIssues').textContent = issues;
+  }
+
+  function updateDatalists(){
+    var lots = {}, builders = {}, addresses = {};
+    allEntries.forEach(function(e){
+      if(e.lot) lots[e.lot] = true;
+      if(e.builder) builders[e.builder] = true;
+      if(e.address) addresses[e.address] = true;
+    });
+    document.getElementById('lotList').innerHTML = Object.keys(lots).map(function(l){ return '<option value="' + l.replace(/"/g,'') + '">'; }).join('');
+    document.getElementById('builderList').innerHTML = Object.keys(builders).map(function(b){ return '<option value="' + b.replace(/"/g,'') + '">'; }).join('');
+    document.getElementById('addressList').innerHTML = Object.keys(addresses).map(function(a){ return '<option value="' + a.replace(/"/g,'') + '">'; }).join('');
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
+  }
+
+  function renderEntries(){
+    var listEl = document.getElementById('entriesList');
+    var filter = document.getElementById('searchBox').value.trim().toLowerCase();
+    var filtered = allEntries.filter(function(e){
+      if(!filter) return true;
+      return (e.lot||'').toLowerCase().indexOf(filter) !== -1 ||
+             (e.block||'').toLowerCase().indexOf(filter) !== -1 ||
+             (e.builder||'').toLowerCase().indexOf(filter) !== -1 ||
+             (e.address||'').toLowerCase().indexOf(filter) !== -1;
+    });
+    if(!filtered.length){
+      listEl.innerHTML = '<div class="empty">No inspections yet. Log your first one above.</div>';
+      return;
+    }
+    listEl.innerHTML = filtered.map(function(e){
+      var img = e.mainPhoto ? '<img src="'+e.mainPhoto+'">' : '<div class="noimg">No photo</div>';
+      var bad = countBad(e);
+      var badges = '<span class="badge ' + (bad ? 'bad' : 'ok') + '">' + (bad ? bad + ' issue' + (bad>1?'s':'') : 'No issues') + '</span>';
+      if(e.completion) badges += '<span class="badge ok">' + e.completion + '</span>';
+      return '<div class="entry" data-id="'+e.id+'">' + img +
+        '<div class="entry-body">' +
+          '<div class="entry-top"><span class="lot-tag">' + escapeHtml(e.address || ('Blk ' + (e.block||'-') + ' Lot ' + e.lot)) + '</span><span class="entry-date">' + (e.date||'') + '</span></div>' +
+          '<div style="font-size:12px;color:var(--ink-faint);">Blk ' + escapeHtml(e.block||'-') + ' &middot; Lot ' + escapeHtml(e.lot) + (e.builder ? ' &middot; ' + escapeHtml(e.builder) : '') + '</div>' +
+          '<div class="badges">' + badges + '</div>' +
+          '<div class="entry-actions"><button data-action="edit">Edit</button><button data-action="delete">Delete</button></div>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  document.getElementById('entriesList').addEventListener('click', async function(e){
+    var editBtn = e.target.closest('button[data-action="edit"]');
+    if(editBtn){
+      var editCard = e.target.closest('.entry');
+      var editEntry = allEntries.find(function(x){ return x.id === editCard.dataset.id; });
+      if(editEntry) loadEntryForEdit(editEntry);
+      return;
+    }
+    var btn = e.target.closest('button[data-action="delete"]');
+    if(!btn) return;
+    if(btn.dataset.armed !== 'true'){
+      btn.dataset.armed = 'true';
+      btn.textContent = 'Tap again to confirm';
+      btn.style.color = 'var(--red)';
+      setTimeout(function(){
+        if(btn.dataset.armed === 'true'){
+          btn.dataset.armed = 'false';
+          btn.textContent = 'Delete';
+          btn.style.color = '';
+        }
+      }, 3000);
+      return;
+    }
+    var card = e.target.closest('.entry');
+    var id = card.dataset.id;
+    btn.disabled = true;
+    btn.textContent = 'Deleting...';
+    try{
+      await localDB.delete('insp:' + id);
+      allEntries = allEntries.filter(function(x){ return x.id !== id; });
+      renderEntries();
+      renderStats();
+      showToast('Inspection deleted.');
+    }catch(err){
+      showToast('Could not delete this entry.');
+      btn.disabled = false;
+      btn.dataset.armed = 'false';
+      btn.textContent = 'Delete';
+      btn.style.color = '';
+      console.error(err);
+    }
+  });
+
+  document.getElementById('searchBox').addEventListener('input', renderEntries);
+  document.getElementById('refreshBtn').addEventListener('click', loadEntries);
+
+  function toCsvField(v){
+    v = (v === undefined || v === null) ? '' : String(v);
+    if(/[",\n]/.test(v)) v = '"' + v.replace(/"/g,'""') + '"';
+    return v;
+  }
+
+  function mainPhotoFilename(e){
+    return 'Lot' + e.lot + '_' + e.date + '_main.jpg';
+  }
+  function itemPhotoFilename(e, itemId){
+    return 'Lot' + e.lot + '_' + e.date + '_item' + itemId + '.jpg';
+  }
+
+  var CSV_HEADER = ['Builder Name','Block','Lot','Address','Date of Inspection','Violation Notes','Category','Item','Result','Remarks','Occurrence','Date of Latest Incident','Item Photo Filename','Main Photo Filename','Completion','Completion Remarks'];
+
+  function buildRows(delim, escapeFn){
+    var rows = [];
+    allEntries.forEach(function(e){
+      CHECKLIST.forEach(function(section){
+        section.items.forEach(function(pair){
+          var id = pair[0], label = pair[1];
+          var st = (e.items && e.items[id]) || {};
+          rows.push([e.builder, e.block, e.lot, e.address, e.date, e.violationNotes, section.cat, label, st.result||'', st.remarks||'', st.occurrence||'', st.incidentDate||'', st.photo ? itemPhotoFilename(e,id) : '', e.mainPhoto ? mainPhotoFilename(e) : '', e.completion||'', e.completionRemarks||''].map(escapeFn).join(delim));
+        });
+      });
+    });
+    return rows;
+  }
+
+  function buildCsv(){
+    var esc = function(v){
+      v = (v === undefined || v === null) ? '' : String(v);
+      if(/[",\n]/.test(v)) v = '"' + v.replace(/"/g,'""') + '"';
+      return v;
+    };
+    return CSV_HEADER.map(esc).join(',') + '\n' + buildRows(',', esc).join('\n');
+  }
+
+  function buildTsv(){
+    var esc = function(v){
+      v = (v === undefined || v === null) ? '' : String(v);
+      return v.replace(/\t/g,' ').replace(/\n/g,' ');
+    };
+    return CSV_HEADER.map(esc).join('\t') + '\n' + buildRows('\t', esc).join('\n');
+  }
+
+  async function saveOrShareFile(blob, filename, mime, shareTitle){
+    var statusEl = document.getElementById('exportStatus');
+    try{
+      if(navigator.canShare && navigator.canShare({files:[new File([blob], filename, {type:mime})]})){
+        await navigator.share({files:[new File([blob], filename, {type:mime})], title: shareTitle});
+        statusEl.textContent = 'Shared. Choose "Save to Files" or your app of choice.';
+        return;
+      }
+    }catch(err){
+      if(err && err.name === 'AbortError') { statusEl.textContent = ''; return; }
+    }
+    try{
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+      statusEl.textContent = 'Downloaded. If nothing appeared, use "Copy table" below instead.';
+    }catch(err){
+      statusEl.textContent = 'Download not supported here — use "Copy table" below instead.';
+      console.error(err);
+    }
+  }
+
+  var GREEN = 'FFBFE3A6';
+  var GREEN_TEXT = 'FF1B4620';
+  var BLUE_TEXT = 'FF1F4E96';
+  var PHOTO_FILL = 'FFF3F1EA';
+  var THIN_GRAY = {style:'thin', color:{argb:'FFD9D6C9'}};
+  var THIN_BORDER = {top:THIN_GRAY, left:THIN_GRAY, bottom:THIN_GRAY, right:THIN_GRAY};
+  var COLS = [
+    {header:'Inspection Items', width:34},
+    {header:'Good', width:8},
+    {header:'Bad', width:8},
+    {header:'N/A', width:8},
+    {header:'Remarks', width:28},
+    {header:'', width:3},
+    {header:'Occurrence', width:12},
+    {header:'Date of latest incident', width:18},
+    {header:'Photo', width:20}
+  ];
+
+  function sheetNameFor(address, lot, used){
+    var raw = (address && address.trim()) ? address.trim() : ('Lot ' + lot);
+    var base = raw.replace(/[\\\/\?\*\[\]:]/g,'-').slice(0,31) || 'Inspection';
+    var name = base, n = 2;
+    while(used[name]){ name = (base.slice(0,28) + ' (' + n + ')').slice(0,31); n++; }
+    used[name] = true;
+    return name;
+  }
+
+  function styleHeaderRow(row, fillArgb, fontArgb, bold){
+    row.eachCell({includeEmpty:true}, function(cell){
+      cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:fillArgb}};
+      cell.font = {bold: !!bold, color:{argb:fontArgb}};
+      cell.alignment = {vertical:'middle', horizontal: cell._column._number === 1 ? 'left' : 'center', wrapText:true};
+      cell.border = THIN_BORDER;
+    });
+    row.getCell(3).font = {bold:true, color:{argb:fontArgb}};
+  }
+
+  function styleBox(ws, r1, c1, r2, c2, fillArgb){
+    for(var r=r1;r<=r2;r++){
+      for(var c=c1;c<=c2;c++){
+        var cell = ws.getCell(r,c);
+        cell.fill = {type:'pattern', pattern:'solid', fgColor:{argb:fillArgb}};
+        cell.border = {
+          top: r===r1 ? THIN_GRAY : undefined,
+          bottom: r===r2 ? THIN_GRAY : undefined,
+          left: c===c1 ? THIN_GRAY : undefined,
+          right: c===c2 ? THIN_GRAY : undefined
+        };
+      }
+    }
+  }
+
+  function addDateDivider(ws, cursor, entry){
+    var row = ws.getRow(cursor);
+    ws.mergeCells(cursor,1,cursor,9);
+    var badCount = Object.keys(entry.items||{}).filter(function(k){ return entry.items[k].result === 'Bad'; }).length;
+    row.getCell(1).value = 'Inspection \u2014 ' + (entry.date || '') + (badCount ? '  (' + badCount + ' issue' + (badCount>1?'s':'') + ')' : '  (no issues)');
+    row.getCell(1).font = {bold:true, color:{argb:'FFFFFFFF'}, size:12};
+    row.getCell(1).fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF16233F'}};
+    row.getCell(1).alignment = {vertical:'middle', horizontal:'left', indent:1};
+    row.height = 20;
+    return cursor + 1;
+  }
+
+  function addChecklistBlock(workbook, ws, entry, cursor){
+    CHECKLIST.forEach(function(section){
+      var catRow = ws.getRow(cursor);
+      ws.mergeCells(cursor,1,cursor,9);
+      catRow.getCell(1).value = section.cat;
+      styleHeaderRow(catRow, GREEN, GREEN_TEXT, true);
+      catRow.getCell(1).alignment = {vertical:'middle', horizontal:'center'};
+      cursor++;
+
+      var subRow = ws.getRow(cursor);
+      COLS.forEach(function(c, i){ subRow.getCell(i+1).value = c.header; });
+      styleHeaderRow(subRow, 'FFFFFFFF', BLUE_TEXT, true);
+      cursor++;
+
+      section.items.forEach(function(pair){
+        var id = pair[0], label = pair[1];
+        var st = (entry.items && entry.items[id]) || {};
+        var row = ws.getRow(cursor);
+        row.getCell(1).value = id + '. ' + label;
+        row.getCell(1).font = {color:{argb:BLUE_TEXT}};
+        row.getCell(2).value = st.result === 'Good' ? 'X' : '';
+        row.getCell(3).value = st.result === 'Bad' ? 'X' : '';
+        row.getCell(4).value = st.result === 'N/A' ? 'X' : '';
+        row.getCell(2).font = {size:12, bold:true, color:{argb: st.result === 'Good' ? 'FF1B7A32' : 'FFB9B6AC'}};
+        row.getCell(3).font = {size:12, bold:true, color:{argb: st.result === 'Bad' ? 'FFC23B2E' : 'FFB9B6AC'}};
+        row.getCell(4).font = {size:12, bold:true, color:{argb: st.result === 'N/A' ? 'FF5B5E58' : 'FFB9B6AC'}};
+        row.getCell(5).value = st.remarks || '';
+        if(st.result === 'Bad'){
+          row.getCell(7).value = st.occurrence || '';
+          row.getCell(8).value = st.incidentDate || '';
+          row.getCell(9).value = st.photo ? itemPhotoFilename(entry, id) : '';
+        }
+        row.eachCell({includeEmpty:true}, function(cell){
+          cell.border = THIN_BORDER;
+          if(cell._column._number >= 2 && cell._column._number <= 4){ cell.alignment = {horizontal:'center', vertical:'middle'}; }
+        });
+        cursor++;
+      });
+      cursor++;
+    });
+
+    var compCatRow = ws.getRow(cursor);
+    ws.mergeCells(cursor,1,cursor,9);
+    compCatRow.getCell(1).value = 'Completion';
+    styleHeaderRow(compCatRow, GREEN, GREEN_TEXT, true);
+    compCatRow.getCell(1).alignment = {vertical:'middle', horizontal:'center'};
+    cursor++;
+
+    var compSubRow = ws.getRow(cursor);
+    ['Inspection Items','Substantial Completion','Incomplete','','Remarks','','','',''].forEach(function(h,i){ compSubRow.getCell(i+1).value = h; });
+    styleHeaderRow(compSubRow, 'FFFFFFFF', BLUE_TEXT, true);
+    cursor++;
+
+    var compRow = ws.getRow(cursor);
+    compRow.getCell(2).value = entry.completion === 'Substantial Completion' ? 'X' : '';
+    compRow.getCell(3).value = entry.completion === 'Incomplete' ? 'X' : '';
+    compRow.getCell(2).font = {size:12, bold:true, color:{argb: entry.completion === 'Substantial Completion' ? 'FF1B7A32' : 'FFB9B6AC'}};
+    compRow.getCell(3).font = {size:12, bold:true, color:{argb: entry.completion === 'Incomplete' ? 'FFC23B2E' : 'FFB9B6AC'}};
+    compRow.getCell(2).alignment = {horizontal:'center', vertical:'middle'};
+    compRow.getCell(3).alignment = {horizontal:'center', vertical:'middle'};
+    compRow.getCell(5).value = entry.completionRemarks || '';
+    compRow.eachCell({includeEmpty:true}, function(cell){ cell.border = THIN_BORDER; });
+    cursor++;
+    return cursor + 1;
+  }
+
+  function addLotSheet(workbook, lot, entries, usedNames){
+    entries.sort(function(a,b){ return a.savedAt - b.savedAt; });
+    var latest = entries[entries.length - 1];
+    var ws = workbook.addWorksheet(sheetNameFor(latest.address, lot, usedNames));
+    ws.columns = COLS;
+
+    ws.mergeCells('A1:I1');
+    ws.getCell('A1').value = 'SITE INSPECTION LOG';
+    ws.getCell('A1').font = {bold:true, size:14, color:{argb:'FFFFFFFF'}};
+    ws.getCell('A1').fill = {type:'pattern', pattern:'solid', fgColor:{argb:'FF16233F'}};
+    ws.getCell('A1').alignment = {vertical:'middle', horizontal:'center'};
+    ws.getRow(1).height = 24;
+
+    ws.mergeCells('B2:C2'); ws.mergeCells('B5:C5'); ws.mergeCells('B6:C6');
+    ws.getCell('A2').value = 'Builder Name'; ws.getCell('B2').value = latest.builder || '';
+    ws.getCell('A3').value = 'Block'; ws.getCell('B3').value = latest.block || '';
+    ws.getCell('A4').value = 'Lot'; ws.getCell('B4').value = latest.lot || '';
+    ws.getCell('A5').value = 'Address'; ws.getCell('B5').value = latest.address || '';
+    ws.getCell('A6').value = 'Last Inspected'; ws.getCell('B6').value = latest.date || '';
+    ws.mergeCells('A7:C7');
+    ws.getCell('A7').value = latest.violationNotes || '';
+    ws.getCell('A7').alignment = {wrapText:true, vertical:'top'};
+    ['A2','A3','A4','A5','A6'].forEach(function(addr){ ws.getCell(addr).font = {bold:true, color:{argb:BLUE_TEXT}}; });
+    for(var r=2;r<=7;r++){ ws.getRow(r).height = 18; }
+
+    styleBox(ws, 2, 4, 7, 6, PHOTO_FILL);
+    var photoCell = ws.getCell(2,4);
+    photoCell.alignment = {vertical:'middle', horizontal:'center', wrapText:true};
+    if(latest.mainPhoto){
+      try{
+        var b64 = latest.mainPhoto.split(',')[1];
+        var imgId = workbook.addImage({base64:b64, extension:'jpeg'});
+        ws.addImage(imgId, {tl:{col:3, row:1.05}, br:{col:6, row:6.9}, editAs:'oneCell'});
+      }catch(e){ console.error('image embed failed', e); }
+    }else{
+      photoCell.value = 'Lot photo';
+      photoCell.font = {italic:true, color:{argb:'FF9A968A'}};
+    }
+
+    var cursor = 9;
+    cursor = addChecklistBlock(workbook, ws, latest, cursor);
+
+    var maxRow = Math.max(cursor + 100, 500);
+    ws.addConditionalFormatting({
+      ref: 'B9:B' + maxRow,
+      rules: [{ type:'containsText', operator:'containsText', text:'X', priority:1, style:{ font:{ color:{argb:'FF1B7A32'}, bold:true } } }]
+    });
+    ws.addConditionalFormatting({
+      ref: 'C9:C' + maxRow,
+      rules: [{ type:'containsText', operator:'containsText', text:'X', priority:1, style:{ font:{ color:{argb:'FFC23B2E'}, bold:true } } }]
+    });
+    ws.addConditionalFormatting({
+      ref: 'D9:D' + maxRow,
+      rules: [{ type:'containsText', operator:'containsText', text:'X', priority:1, style:{ font:{ color:{argb:'FF5B5E58'}, bold:true } } }]
+    });
+  }
+
+  async function buildWorkbookBlob(){
+    var workbook = new ExcelJS.Workbook();
+    var usedNames = {};
+    var byLot = {};
+    var lotOrder = [];
+    allEntries.forEach(function(entry){
+      var addrKey = (entry.address || '').trim().toLowerCase();
+      var key = addrKey || (('blk:' + (entry.block||'').trim().toLowerCase() + '|lot:' + (entry.lot||'').trim().toLowerCase()) || ('_' + entry.id));
+      if(!byLot[key]){ byLot[key] = []; lotOrder.push(key); }
+      byLot[key].push(entry);
+    });
+    lotOrder.sort(function(a,b){
+      var ea = byLot[a][0], eb = byLot[b][0];
+      var labelA = ea.address || ('Blk ' + ea.block + ' Lot ' + ea.lot);
+      var labelB = eb.address || ('Blk ' + eb.block + ' Lot ' + eb.lot);
+      return labelA.localeCompare(labelB, undefined, {numeric:true});
+    });
+    lotOrder.forEach(function(key){
+      addLotSheet(workbook, byLot[key][0].lot, byLot[key], usedNames);
+    });
+    var buffer = await workbook.xlsx.writeBuffer();
+    return new Blob([buffer], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  }
+
+
+  document.getElementById('exportXlsxBtn').addEventListener('click', async function(){
+    if(!allEntries.length){ showToast('No inspections to export yet.'); return; }
+    var btn = document.getElementById('exportXlsxBtn');
+    btn.disabled = true;
+    btn.textContent = 'Building report...';
+    try{
+      var blob = await buildWorkbookBlob();
+      await saveOrShareFile(blob, 'site-inspections-' + new Date().toISOString().slice(0,10) + '.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Site inspections');
+    }catch(err){
+      document.getElementById('exportStatus').textContent = 'Could not build the Excel file.';
+      console.error(err);
+    }
+    btn.disabled = false;
+    btn.textContent = 'Download Excel report';
+  });
+
+  document.getElementById('copyCsvBtn').addEventListener('click', async function(){
+    if(!allEntries.length){ showToast('No inspections to export yet.'); return; }
+    var statusEl = document.getElementById('exportStatus');
+    try{
+      await navigator.clipboard.writeText(buildTsv());
+      statusEl.textContent = 'Copied. Open your sheet and paste into the top-left cell.';
+    }catch(err){
+      statusEl.textContent = 'Could not copy automatically — select and copy the CSV text manually.';
+      var w = window.open('', '_blank');
+      if(w){ w.document.write('<pre style="white-space:pre-wrap;font-family:monospace;padding:16px;">' + buildCsv().replace(/[&<>]/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}) + '</pre>'); }
+      console.error(err);
+    }
+  });
+
+  document.getElementById('exportZipBtn').addEventListener('click', async function(){
+    var hasAny = allEntries.some(function(e){ return e.mainPhoto || Object.keys(e.items||{}).some(function(k){ return e.items[k].photo; }); });
+    if(!hasAny){ showToast('No photos to export yet.'); return; }
+    var btn = document.getElementById('exportZipBtn');
+    btn.disabled = true;
+    btn.textContent = 'Zipping...';
+    try{
+      var zip = new JSZip();
+      allEntries.forEach(function(e){
+        if(e.mainPhoto){
+          zip.file(mainPhotoFilename(e), e.mainPhoto.split(',')[1], {base64:true});
+        }
+        Object.keys(e.items||{}).forEach(function(id){
+          var it = e.items[id];
+          if(it.photo){
+            zip.file(itemPhotoFilename(e, id), it.photo.split(',')[1], {base64:true});
+          }
+        });
+      });
+      var content = await zip.generateAsync({type:'blob'});
+      await saveOrShareFile(content, 'site-inspection-photos-' + new Date().toISOString().slice(0,10) + '.zip', 'application/zip', 'Site inspection photos');
+    }catch(err){
+      document.getElementById('exportStatus').textContent = 'Could not build the zip file.';
+      console.error(err);
+    }
+    btn.disabled = false;
+    btn.textContent = 'Download photos (.zip)';
+  });
+
+  async function importBackupText(text){
+    var data = JSON.parse(text);
+    var incoming = Array.isArray(data) ? data : (data.entries || []);
+    if(!incoming.length){ showToast('No entries found in that backup.'); return; }
+    for(var i=0;i<incoming.length;i++){
+      var e = incoming[i];
+      if(e && e.id){ await localDB.set('insp:' + e.id, JSON.stringify(e)); }
+    }
+    await loadEntries();
+    showToast('Imported ' + incoming.length + ' inspection' + (incoming.length>1?'s':'') + '.');
+  }
+
+  document.getElementById('copyBackupBtn').addEventListener('click', async function(){
+    if(!allEntries.length){ showToast('No inspections to back up yet.'); return; }
+    var text = JSON.stringify({ appId:'sitelog', exportedAt: Date.now(), entries: allEntries });
+    try{
+      await navigator.clipboard.writeText(text);
+      showToast('Copied ' + allEntries.length + ' inspection' + (allEntries.length>1?'s':'') + ' to clipboard. Paste it into Notes/Messages to move it, or straight into "Paste backup to import" on another device.');
+    }catch(err){
+      showToast('Could not copy automatically. Use "Download backup file" instead.');
+      console.error(err);
+    }
+  });
+
+  document.getElementById('pasteBackupBtn').addEventListener('click', function(){
+    var box = document.getElementById('pasteBackupBox');
+    box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  });
+
+  document.getElementById('pasteBackupSubmit').addEventListener('click', async function(){
+    var text = document.getElementById('pasteBackupText').value.trim();
+    if(!text){ showToast('Paste your backup text first.'); return; }
+    try{
+      await importBackupText(text);
+      document.getElementById('pasteBackupText').value = '';
+      document.getElementById('pasteBackupBox').style.display = 'none';
+    }catch(err){
+      showToast('Could not read that pasted text — make sure it\'s the full backup.');
+      console.error(err);
+    }
+  });
+
+  document.getElementById('exportBackupBtn').addEventListener('click', async function(){
+    if(!allEntries.length){ showToast('No inspections to back up yet.'); return; }
+    showToast('Exporting ' + allEntries.length + ' inspection' + (allEntries.length>1?'s':'') + '...');
+    var blob = new Blob([JSON.stringify({ appId:'sitelog', exportedAt: Date.now(), entries: allEntries }, null, 2)], {type:'application/json'});
+    await saveOrShareFile(blob, 'site-log-backup-' + new Date().toISOString().slice(0,10) + '.json', 'application/json', 'Site log backup');
+  });
+
+  document.getElementById('importBackupBtn').addEventListener('click', function(){
+    document.getElementById('importBackupInput').click();
+  });
+
+  document.getElementById('importBackupInput').addEventListener('change', async function(){
+    var file = this.files[0];
+    if(!file) return;
+    try{
+      var text = await file.text();
+      await importBackupText(text);
+    }catch(err){
+      showToast('Could not read that backup file.');
+      console.error(err);
+    }
+    this.value = '';
+  });
+
+  updateProgress();
+  loadEntries();
+})();
+</script>
+
+</body>
+</html>
