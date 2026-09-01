@@ -221,6 +221,28 @@
     <div class="toolbar">
       <input type="text" id="searchBox" placeholder="Filter by address, lot, block, or builder">
       <button class="btn btn-sm" id="refreshBtn">Refresh</button>
+      <button class="btn btn-sm" id="selectModeBtn">Select multiple</button>
+    </div>
+    <div id="massEditBar" style="display:none;background:var(--gold-bg);border:1px solid #EAD9A0;border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+      <div style="font-size:12.5px;font-weight:600;margin-bottom:8px;"><span id="massEditCount">0</span> selected</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <select id="massEditPhase" style="flex:1;min-width:120px;padding:8px;border:1px solid var(--line);border-radius:6px;">
+          <option value="">Select phase</option>
+          <option>104</option>
+          <option>105</option>
+          <option>106</option>
+          <option>401B</option>
+          <option>402</option>
+          <option>403</option>
+          <option>404</option>
+          <option>601</option>
+          <option>602</option>
+          <option>603</option>
+          <option>605</option>
+        </select>
+        <button class="btn btn-sm btn-primary" id="massEditApplyBtn">Apply to selected</button>
+        <button class="btn btn-sm" id="massEditCancelBtn">Cancel</button>
+      </div>
     </div>
     <div id="entriesList"><div class="loading">Loading entries...</div></div>
   </div>
@@ -828,6 +850,9 @@
     return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
   }
 
+  var selectMode = false;
+  var selectedIds = {};
+
   function renderEntries(){
     var listEl = document.getElementById('entriesList');
     var filter = document.getElementById('searchBox').value.trim().toLowerCase();
@@ -848,17 +873,76 @@
       var bad = countBad(e);
       var badges = '<span class="badge ' + (bad ? 'bad' : 'ok') + '">' + (bad ? bad + ' issue' + (bad>1?'s':'') : 'No issues') + '</span>';
       if(e.completion) badges += '<span class="badge ok">' + e.completion + '</span>';
-      return '<div class="entry" data-id="'+e.id+'">' + img +
+      var checkbox = selectMode ? '<input type="checkbox" class="mass-select-checkbox" data-id="' + e.id + '" ' + (selectedIds[e.id] ? 'checked' : '') + ' style="width:20px;height:20px;flex-shrink:0;align-self:center;">' : '';
+      var actions = selectMode ? '' : '<div class="entry-actions"><button data-action="edit">Edit</button><button data-action="delete">Delete</button></div>';
+      return '<div class="entry" data-id="'+e.id+'">' + checkbox + img +
         '<div class="entry-body">' +
           '<div class="entry-top"><span class="lot-tag">' + escapeHtml(e.address || ('Blk ' + (e.block||'-') + ' Lot ' + e.lot)) + '</span><span class="entry-date">' + (e.date||'') + '</span></div>' +
           '<div style="font-size:12px;color:var(--ink-faint);">' + (e.phase ? 'Phase ' + escapeHtml(e.phase) + ' &middot; ' : '') + 'Blk ' + escapeHtml(e.block||'-') + ' &middot; Lot ' + escapeHtml(e.lot) + (e.builder ? ' &middot; ' + escapeHtml(e.builder) : '') + '</div>' +
           '<div class="badges">' + badges + '</div>' +
-          '<div class="entry-actions"><button data-action="edit">Edit</button><button data-action="delete">Delete</button></div>' +
+          actions +
         '</div></div>';
     }).join('');
+    document.getElementById('massEditCount').textContent = Object.keys(selectedIds).filter(function(k){ return selectedIds[k]; }).length;
   }
 
+  document.getElementById('selectModeBtn').addEventListener('click', function(){
+    selectMode = !selectMode;
+    selectedIds = {};
+    document.getElementById('massEditBar').style.display = selectMode ? 'block' : 'none';
+    document.getElementById('selectModeBtn').textContent = selectMode ? 'Cancel select' : 'Select multiple';
+    renderEntries();
+  });
+
+  document.getElementById('massEditCancelBtn').addEventListener('click', function(){
+    selectMode = false;
+    selectedIds = {};
+    document.getElementById('massEditBar').style.display = 'none';
+    document.getElementById('selectModeBtn').textContent = 'Select multiple';
+    renderEntries();
+  });
+
+  document.getElementById('massEditApplyBtn').addEventListener('click', async function(){
+    var phase = document.getElementById('massEditPhase').value;
+    var ids = Object.keys(selectedIds).filter(function(k){ return selectedIds[k]; });
+    if(!phase){ showToast('Choose a phase first.'); return; }
+    if(!ids.length){ showToast('Select at least one inspection.'); return; }
+    var btn = document.getElementById('massEditApplyBtn');
+    btn.disabled = true;
+    btn.textContent = 'Applying...';
+    try{
+      for(var i=0;i<ids.length;i++){
+        var id = ids[i];
+        var idx = allEntries.findIndex(function(x){ return x.id === id; });
+        if(idx === -1) continue;
+        allEntries[idx] = Object.assign({}, allEntries[idx], {phase: phase});
+        await localDB.set('insp:' + id, JSON.stringify(allEntries[idx]));
+      }
+      showToast('Set Phase ' + phase + ' on ' + ids.length + ' inspection' + (ids.length>1?'s':'') + '.');
+      selectMode = false;
+      selectedIds = {};
+      document.getElementById('massEditBar').style.display = 'none';
+      document.getElementById('selectModeBtn').textContent = 'Select multiple';
+      renderEntries();
+      renderStats();
+      updateDatalists();
+    }catch(err){
+      showToast('Could not apply the change to all selected entries.');
+      console.error(err);
+    }
+    btn.disabled = false;
+    btn.textContent = 'Apply to selected';
+  });
+
   document.getElementById('entriesList').addEventListener('click', async function(e){
+    if(selectMode){
+      var card = e.target.closest('.entry');
+      if(!card) return;
+      var id = card.dataset.id;
+      selectedIds[id] = !selectedIds[id];
+      renderEntries();
+      return;
+    }
     var editBtn = e.target.closest('button[data-action="edit"]');
     if(editBtn){
       var editCard = e.target.closest('.entry');
