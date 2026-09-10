@@ -1406,12 +1406,27 @@
     var data = JSON.parse(text);
     var incoming = Array.isArray(data) ? data : (data.entries || []);
     if(!incoming.length){ showToast('No entries found in that backup.'); return; }
+    var successCount = 0;
+    var firstError = null;
     for(var i=0;i<incoming.length;i++){
       var e = incoming[i];
-      if(e && e.id){ await saveEntryRemote(e); }
+      if(!e || !e.id) continue;
+      try{
+        await saveEntryRemote(e);
+        successCount++;
+      }catch(err){
+        if(!firstError) firstError = err;
+        console.error('Failed to import entry', e.id, err);
+      }
     }
     await loadEntries();
-    showToast('Imported ' + incoming.length + ' inspection' + (incoming.length>1?'s':'') + '.');
+    if(successCount === incoming.length){
+      showToast('Imported ' + successCount + ' inspection' + (successCount>1?'s':'') + '.');
+    }else if(successCount > 0){
+      showToast('Imported ' + successCount + ' of ' + incoming.length + '. ' + (incoming.length-successCount) + ' failed: ' + (firstError && firstError.message ? firstError.message : 'unknown error'));
+    }else{
+      throw firstError || new Error('All entries failed to import.');
+    }
   }
 
   document.getElementById('copyBackupBtn').addEventListener('click', async function(){
@@ -1439,7 +1454,8 @@
       document.getElementById('pasteBackupText').value = '';
       document.getElementById('pasteBackupBox').style.display = 'none';
     }catch(err){
-      showToast('Could not read that pasted text — make sure it\'s the full backup.');
+      var detail1 = (err && (err.message || err.toString())) || 'unknown error';
+      showToast('Import failed: ' + detail1);
       console.error(err);
     }
   });
@@ -1462,7 +1478,8 @@
       var text = await file.text();
       await importBackupText(text);
     }catch(err){
-      showToast('Could not read that backup file.');
+      var detail2 = (err && (err.message || err.toString())) || 'unknown error';
+      showToast('Import failed: ' + detail2);
       console.error(err);
     }
     this.value = '';
