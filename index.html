@@ -260,7 +260,7 @@
 
   <div class="card">
     <h2>Backup &amp; transfer</h2>
-    <p style="font-size:13px;color:var(--ink-soft);margin-top:0;">This data lives only in this browser on this device. On iPhone, use Copy/Paste below — it's more reliable than file downloads in Safari.</p>
+    <p style="font-size:13px;color:var(--ink-soft);margin-top:0;">This is shared, live data — everyone using this site sees the same inspections in real time. Use this section for an extra local safety copy, or to move data in from an old export.</p>
     <div class="export-row">
       <button class="btn" id="copyBackupBtn">Copy backup to clipboard</button>
       <button class="btn" id="pasteBackupBtn">Paste backup to import</button>
@@ -276,12 +276,13 @@
     <input type="file" id="importBackupInput" accept=".json,application/json,text/plain,text/json,public.json,public.text,application/octet-stream" style="display:none;">
   </div>
 
-  <p style="font-size:11.5px;color:var(--ink-faint);text-align:center;">Runs entirely in this browser — no account, Claude plan, or internet connection required for your data. Export a backup regularly.</p>
+  <p style="font-size:11.5px;color:var(--ink-faint);text-align:center;">Shared, live data &mdash; everyone using this site sees the same inspections and photos. Requires an internet connection to save or load. Export a backup regularly.</p>
 
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
 (function(){
   var toastEl = document.createElement('div');
@@ -300,74 +301,57 @@
     }, Math.min(6000, Math.max(2600, msg.length * 60)));
   }
 
-  var DB_NAME = 'sitelog_db';
-  var STORE_NAME = 'kv';
-  function openDB(){
-    return new Promise(function(resolve, reject){
-      var req = indexedDB.open(DB_NAME, 1);
-      req.onupgradeneeded = function(e){
-        var db = e.target.result;
-        if(!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME);
-      };
-      req.onsuccess = function(e){ resolve(e.target.result); };
-      req.onerror = function(e){ reject(e.target.error); };
-    });
+  var SUPABASE_URL = 'https://hazvvhnjizfhxwxagqnu.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_yp_maklx2blPUG64LUub1w_laG0pYxG';
+  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  function dataUrlToBlob(dataUrl){
+    var parts = dataUrl.split(',');
+    var mimeMatch = parts[0].match(/:(.*?);/);
+    var mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    var bin = atob(parts[1]);
+    var arr = new Uint8Array(bin.length);
+    for(var i=0;i<bin.length;i++){ arr[i] = bin.charCodeAt(i); }
+    return new Blob([arr], {type:mime});
   }
-  var localDB = {
-    set: function(key, value){
-      return openDB().then(function(db){
-        return new Promise(function(resolve, reject){
-          var tx = db.transaction(STORE_NAME, 'readwrite');
-          tx.objectStore(STORE_NAME).put(value, key);
-          tx.oncomplete = function(){ resolve({key:key, value:value}); };
-          tx.onerror = function(){ reject(tx.error); };
-        });
-      });
-    },
-    get: function(key){
-      return openDB().then(function(db){
-        return new Promise(function(resolve, reject){
-          var tx = db.transaction(STORE_NAME, 'readonly');
-          var req = tx.objectStore(STORE_NAME).get(key);
-          req.onsuccess = function(){
-            if(req.result === undefined) reject(new Error('not found'));
-            else resolve({key:key, value:req.result});
-          };
-          req.onerror = function(){ reject(req.error); };
-        });
-      });
-    },
-    delete: function(key){
-      return openDB().then(function(db){
-        return new Promise(function(resolve, reject){
-          var tx = db.transaction(STORE_NAME, 'readwrite');
-          tx.objectStore(STORE_NAME).delete(key);
-          tx.oncomplete = function(){ resolve({key:key, deleted:true}); };
-          tx.onerror = function(){ reject(tx.error); };
-        });
-      });
-    },
-    list: function(prefix){
-      return openDB().then(function(db){
-        return new Promise(function(resolve, reject){
-          var tx = db.transaction(STORE_NAME, 'readonly');
-          var store = tx.objectStore(STORE_NAME);
-          var keys = [];
-          var req = (store.openKeyCursor || store.openCursor).call(store);
-          req.onsuccess = function(e){
-            var cursor = e.target.result;
-            if(cursor){
-              if(!prefix || String(cursor.key).indexOf(prefix) === 0) keys.push(cursor.key);
-              cursor.continue();
-            }else{
-              resolve({keys:keys});
-            }
-          };
-          req.onerror = function(){ reject(req.error); };
-        });
-      });
+
+  async function uploadPhotoIfNeeded(dataUrlOrUrl, path){
+    if(!dataUrlOrUrl) return null;
+    if(!dataUrlOrUrl.startsWith('data:')) return dataUrlOrUrl; // already a remote URL, nothing to do
+    var blob = dataUrlToBlob(dataUrlOrUrl);
+    var { error } = await sb.storage.from('photos').upload(path, blob, {upsert:true, contentType:'image/jpeg'});
+    if(error) throw error;
+    var { data } = sb.storage.from('photos').getPublicUrl(path);
+    return data.publicUrl;
+  }
+
+  async function saveEntryRemote(entry){
+    if(entry.mainPhoto){
+      entry.mainPhoto = await uploadPhotoIfNeeded(entry.mainPhoto, entry.id + '/main_' + Date.now() + '.jpg');
     }
-  };
+    var itemIds = Object.keys(entry.items || {});
+    for(var i=0;i<itemIds.length;i++){
+      var id = itemIds[i];
+      var st = entry.items[id];
+      if(st.photo){
+        st.photo = await uploadPhotoIfNeeded(st.photo, entry.id + '/item' + id + '_' + Date.now() + '.jpg');
+      }
+    }
+    var { error } = await sb.from('inspections').upsert({ id: entry.id, data: entry, updated_at: new Date().toISOString() });
+    if(error) throw error;
+    return entry;
+  }
+
+  async function loadAllEntriesRemote(){
+    var { data, error } = await sb.from('inspections').select('id, data, updated_at').order('updated_at', {ascending:false});
+    if(error) throw error;
+    return (data || []).map(function(row){ return row.data; });
+  }
+
+  async function deleteEntryRemote(id){
+    var { error } = await sb.from('inspections').delete().eq('id', id);
+    if(error) throw error;
+  }
 
   var CHECKLIST = [
     {cat:"Builder Sign", items:[[1,"Maximum of one builder sign located on lot"]]},
@@ -758,16 +742,11 @@
     };
 
     var saveBtn = document.getElementById('saveBtn');
-    var payload = JSON.stringify(entry);
-    var approxBytes = payload.length;
-    if(approxBytes > 4.5 * 1024 * 1024){
-      showToast('This inspection is too large to save (' + Math.round(approxBytes/1024/1024*10)/10 + 'MB). Remove a photo or retake with less detail, then try again.');
-      return;
-    }
     saveBtn.disabled = true;
-    saveBtn.textContent = isEditing ? 'Updating...' : 'Saving...';
+    saveBtn.textContent = entry.mainPhoto || Object.keys(entry.items||{}).some(function(k){ return entry.items[k].photo; }) ? 'Uploading photos...' : (isEditing ? 'Updating...' : 'Saving...');
     try{
-      await localDB.set('insp:' + id, payload);
+      await saveEntryRemote(entry);
+      saveBtn.textContent = isEditing ? 'Updating...' : 'Saving...';
       if(isEditing){
         allEntries = allEntries.map(function(x){ return x.id === id ? entry : x; });
       }else{
@@ -800,20 +779,13 @@
     var listEl = document.getElementById('entriesList');
     listEl.innerHTML = '<div class="loading">Loading entries...</div>';
     try{
-      var listResult = await localDB.list('insp:');
-      var keys = (listResult && listResult.keys) || [];
-      var results = await Promise.all(keys.map(function(k){
-        return localDB.get(k).catch(function(){ return null; });
-      }));
-      allEntries = results.filter(Boolean).map(function(r){
-        try{ return JSON.parse(r.value); }catch(e){ return null; }
-      }).filter(Boolean);
+      allEntries = await loadAllEntriesRemote();
       allEntries.sort(function(a,b){ return b.savedAt - a.savedAt; });
       renderEntries();
       renderStats();
       updateDatalists();
     }catch(err){
-      listEl.innerHTML = '<div class="empty">Could not load entries. Refresh to try again.</div>';
+      listEl.innerHTML = '<div class="empty">Could not load entries. Check your connection and refresh to try again.</div>';
       console.error(err);
     }
   }
@@ -915,7 +887,7 @@
         var idx = allEntries.findIndex(function(x){ return x.id === id; });
         if(idx === -1) continue;
         allEntries[idx] = Object.assign({}, allEntries[idx], {phase: phase});
-        await localDB.set('insp:' + id, JSON.stringify(allEntries[idx]));
+        await saveEntryRemote(allEntries[idx]);
       }
       showToast('Set Phase ' + phase + ' on ' + ids.length + ' inspection' + (ids.length>1?'s':'') + '.');
       selectMode = false;
@@ -969,7 +941,7 @@
     btn.disabled = true;
     btn.textContent = 'Deleting...';
     try{
-      await localDB.delete('insp:' + id);
+      await deleteEntryRemote(id);
       allEntries = allEntries.filter(function(x){ return x.id !== id; });
       renderEntries();
       renderStats();
@@ -1253,7 +1225,18 @@
     ws.views = [{state:'frozen', ySplit:3}];
   }
 
-  function addLotSheet(workbook, sheetName, entries){
+  async function urlToBase64(url){
+    var resp = await fetch(url);
+    var blob = await resp.blob();
+    return new Promise(function(resolve, reject){
+      var reader = new FileReader();
+      reader.onloadend = function(){ resolve(reader.result.split(',')[1]); };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function addLotSheet(workbook, sheetName, entries){
     entries.sort(function(a,b){ return a.savedAt - b.savedAt; });
     var latest = entries[entries.length - 1];
     var ws = workbook.addWorksheet(sheetName);
@@ -1284,7 +1267,7 @@
     photoCell.alignment = {vertical:'middle', horizontal:'center', wrapText:true};
     if(latest.mainPhoto){
       try{
-        var b64 = latest.mainPhoto.split(',')[1];
+        var b64 = latest.mainPhoto.startsWith('data:') ? latest.mainPhoto.split(',')[1] : await urlToBase64(latest.mainPhoto);
         var imgId = workbook.addImage({base64:b64, extension:'jpeg'});
         ws.addImage(imgId, {tl:{col:3, row:1.05}, br:{col:6, row:7.9}, editAs:'oneCell'});
       }catch(e){ console.error('image embed failed', e); }
@@ -1347,9 +1330,9 @@
 
     addOverviewSheet(workbook, lotOrder, byLot, sheetNames);
 
-    lotOrder.forEach(function(key){
-      addLotSheet(workbook, sheetNames[key], byLot[key]);
-    });
+    for(var li=0; li<lotOrder.length; li++){
+      await addLotSheet(workbook, sheetNames[lotOrder[li]], byLot[lotOrder[li]]);
+    }
     var buffer = await workbook.xlsx.writeBuffer();
     return new Blob([buffer], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   }
@@ -1393,17 +1376,22 @@
     btn.textContent = 'Zipping...';
     try{
       var zip = new JSZip();
-      allEntries.forEach(function(e){
+      for(var ei=0; ei<allEntries.length; ei++){
+        var e = allEntries[ei];
         if(e.mainPhoto){
-          zip.file(mainPhotoFilename(e), e.mainPhoto.split(',')[1], {base64:true});
+          var mainB64 = e.mainPhoto.startsWith('data:') ? e.mainPhoto.split(',')[1] : await urlToBase64(e.mainPhoto);
+          zip.file(mainPhotoFilename(e), mainB64, {base64:true});
         }
-        Object.keys(e.items||{}).forEach(function(id){
+        var itemIds = Object.keys(e.items||{});
+        for(var ii=0; ii<itemIds.length; ii++){
+          var id = itemIds[ii];
           var it = e.items[id];
           if(it.photo){
-            zip.file(itemPhotoFilename(e, id), it.photo.split(',')[1], {base64:true});
+            var itemB64 = it.photo.startsWith('data:') ? it.photo.split(',')[1] : await urlToBase64(it.photo);
+            zip.file(itemPhotoFilename(e, id), itemB64, {base64:true});
           }
-        });
-      });
+        }
+      }
       var content = await zip.generateAsync({type:'blob'});
       await saveOrShareFile(content, 'site-inspection-photos-' + new Date().toISOString().slice(0,10) + '.zip', 'application/zip', 'Site inspection photos');
     }catch(err){
@@ -1420,7 +1408,7 @@
     if(!incoming.length){ showToast('No entries found in that backup.'); return; }
     for(var i=0;i<incoming.length;i++){
       var e = incoming[i];
-      if(e && e.id){ await localDB.set('insp:' + e.id, JSON.stringify(e)); }
+      if(e && e.id){ await saveEntryRemote(e); }
     }
     await loadEntries();
     showToast('Imported ' + incoming.length + ' inspection' + (incoming.length>1?'s':'') + '.');
@@ -1482,6 +1470,16 @@
 
   updateProgress();
   loadEntries();
+
+  var realtimeReloadTimer = null;
+  sb.channel('inspections-changes')
+    .on('postgres_changes', {event:'*', schema:'public', table:'inspections'}, function(){
+      clearTimeout(realtimeReloadTimer);
+      realtimeReloadTimer = setTimeout(function(){
+        if(!selectMode) loadEntries();
+      }, 800);
+    })
+    .subscribe();
 })();
 </script>
 
