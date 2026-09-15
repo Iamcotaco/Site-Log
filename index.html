@@ -657,6 +657,7 @@
   }
 
   function applyPrevEntry(prev){
+    editingEntryId = prev.id;
     document.getElementById('builderName').value = prev.builder || '';
     document.getElementById('phase').value = prev.phase || '';
     document.getElementById('block').value = prev.block || '';
@@ -676,6 +677,7 @@
       };
     });
     syncChecklistUIFromState();
+    document.getElementById('saveBtn').textContent = 'Update inspection';
   }
 
   function checkForMatch(){
@@ -691,7 +693,7 @@
         applyPrevEntry(prev);
         autoLoadedKey = key;
       }
-      document.getElementById('prevMatchText').textContent = 'Loaded the last inspection for ' + (prev.address || ('Block ' + prev.block + ' Lot ' + prev.lot)) + ' — last visited ' + (prev.date || '') + '. Take a new photo and adjust anything that changed.';
+      document.getElementById('prevMatchText').textContent = 'Updating the existing record for ' + (prev.address || ('Block ' + prev.block + ' Lot ' + prev.lot)) + ' — last visited ' + (prev.date || '') + '. Take a new photo and adjust anything that changed.';
       banner.style.display = 'block';
     }else{
       autoLoadedKey = null;
@@ -713,6 +715,8 @@
     applyChecklistDefaults();
     syncChecklistUIFromState();
     autoLoadedKey = 'cleared';
+    editingEntryId = null;
+    document.getElementById('saveBtn').textContent = 'Save inspection';
     document.getElementById('prevMatchBanner').style.display = 'none';
   });
 
