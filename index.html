@@ -455,7 +455,22 @@
     var id = wrap.dataset.item;
     var v = btn.dataset.v;
     var st = getState(id);
+    var changed = st.result !== v;
     st.result = v;
+    if(changed){
+      st.remarks = '';
+      st.occurrence = '';
+      st.incidentDate = '';
+      st.photo = null;
+      var remarksInput = document.querySelector('.item-remarks[data-item="' + id + '"]');
+      if(remarksInput) remarksInput.value = '';
+      var occInput = document.querySelector('.v-occurrence[data-item="' + id + '"]');
+      if(occInput) occInput.value = '';
+      var dateInput = document.querySelector('.v-date[data-item="' + id + '"]');
+      if(dateInput) dateInput.value = '';
+      var thumbWrap = document.querySelector('.v-photo-thumb-wrap[data-item="' + id + '"]');
+      if(thumbWrap) thumbWrap.innerHTML = '';
+    }
     Array.prototype.forEach.call(wrap.children, function(b){
       b.classList.toggle('active', b.dataset.v === v);
     });
