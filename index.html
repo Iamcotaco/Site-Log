@@ -128,6 +128,43 @@
 
 <main>
 
+  <div class="card" id="walkthroughCard">
+    <h2>Phase Walkthrough</h2>
+    <div id="walkthroughSetup">
+      <p style="font-size:13px;color:var(--ink-soft);margin-top:0;">Pick a phase and step through every address in it one at a time \u2014 no retyping the address between houses.</p>
+      <div class="row">
+        <div class="field">
+          <label for="walkthroughPhase">Phase</label>
+          <select id="walkthroughPhase">
+            <option value="">Select phase</option>
+            <option>104</option>
+            <option>105</option>
+            <option>106</option>
+            <option>401B</option>
+            <option>402</option>
+            <option>403</option>
+            <option>404</option>
+            <option>601</option>
+            <option>602</option>
+            <option>603</option>
+            <option>605</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-block" id="startWalkthroughBtn">Start walkthrough</button>
+    </div>
+    <div id="walkthroughActive" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <span id="walkthroughProgress" style="font-weight:700;font-size:13px;color:var(--navy);"></span>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm" id="skipWalkthroughBtn">Skip</button>
+          <button class="btn btn-sm" id="endWalkthroughBtn">End</button>
+        </div>
+      </div>
+      <div id="walkthroughAddressLabel" style="font-size:15px;font-weight:700;color:var(--ink);"></div>
+    </div>
+  </div>
+
   <div class="card">
     <h2>Inspection details</h2>
     <div id="editBanner" style="display:none;align-items:center;justify-content:space-between;gap:8px;background:#EAEDF4;border:1px solid #C9D2E8;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:13px;">
@@ -782,7 +819,11 @@
       renderStats();
       updateDatalists();
       var wasEditing = isEditing;
-      resetForm();
+      if(walkthroughActive){
+        advanceWalkthrough();
+      }else{
+        resetForm();
+      }
       var status = document.getElementById('saveStatus');
       status.textContent = wasEditing ? 'Updated.' : 'Saved.';
       status.style.display = 'block';
@@ -796,6 +837,84 @@
     saveBtn.textContent = 'Save inspection';
   }
   document.getElementById('saveBtn').addEventListener('click', saveEntry);
+
+  var walkthroughActive = false;
+  var walkthroughQueue = [];
+  var walkthroughIndex = -1;
+  var walkthroughPhase = null;
+
+  function buildWalkthroughQueue(phase){
+    var seen = {};
+    var queue = [];
+    allEntries.forEach(function(e){
+      if((e.phase||'') !== phase) return;
+      var addr = (e.address || '').trim();
+      if(!addr || seen[addr.toLowerCase()]) return;
+      seen[addr.toLowerCase()] = true;
+      queue.push(addr);
+    });
+    queue.sort(function(a,b){
+      return addressSortKeyApp(a).localeCompare(addressSortKeyApp(b), undefined, {numeric:true});
+    });
+    return queue;
+  }
+
+  function addressSortKeyApp(address){
+    return (address || '').trim().replace(/^\d+\s*/, '').toLowerCase();
+  }
+
+  function goToWalkthroughAddress(i){
+    if(i >= walkthroughQueue.length){
+      showToast('Phase ' + walkthroughPhase + ' complete \u2014 ' + walkthroughQueue.length + ' addresses done.');
+      endWalkthrough();
+      return;
+    }
+    resetForm();
+    walkthroughIndex = i;
+    var addr = walkthroughQueue[i];
+    document.getElementById('address').value = addr;
+    document.getElementById('phase').value = walkthroughPhase;
+    checkForMatch();
+    document.getElementById('walkthroughProgress').textContent = 'Address ' + (i+1) + ' of ' + walkthroughQueue.length;
+    document.getElementById('walkthroughAddressLabel').textContent = addr;
+    document.querySelector('.card h2').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  function advanceWalkthrough(){
+    goToWalkthroughAddress(walkthroughIndex + 1);
+  }
+
+  function endWalkthrough(){
+    walkthroughActive = false;
+    walkthroughQueue = [];
+    walkthroughIndex = -1;
+    walkthroughPhase = null;
+    document.getElementById('walkthroughSetup').style.display = 'block';
+    document.getElementById('walkthroughActive').style.display = 'none';
+  }
+
+  document.getElementById('startWalkthroughBtn').addEventListener('click', function(){
+    var phase = document.getElementById('walkthroughPhase').value;
+    if(!phase){ showToast('Choose a phase first.'); return; }
+    var queue = buildWalkthroughQueue(phase);
+    if(!queue.length){ showToast('No addresses found for Phase ' + phase + ' yet. Add the first one manually below.'); return; }
+    walkthroughActive = true;
+    walkthroughPhase = phase;
+    walkthroughQueue = queue;
+    document.getElementById('walkthroughSetup').style.display = 'none';
+    document.getElementById('walkthroughActive').style.display = 'block';
+    goToWalkthroughAddress(0);
+  });
+
+  document.getElementById('skipWalkthroughBtn').addEventListener('click', function(){
+    advanceWalkthrough();
+  });
+
+  document.getElementById('endWalkthroughBtn').addEventListener('click', function(){
+    endWalkthrough();
+    resetForm();
+    showToast('Walkthrough ended.');
+  });
   document.getElementById('cancelEditBtn').addEventListener('click', function(){
     resetForm();
     showToast('Edit cancelled.');
