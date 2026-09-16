@@ -31,7 +31,9 @@
     --radius:10px;
   }
   *{box-sizing:border-box;}
-  body{margin:0;background:linear-gradient(180deg, #F6F2E9 0%, #EFE7D6 45%, #E9DFC8 100%) fixed;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding-bottom:60px;min-height:100vh;}
+  html{overscroll-behavior-y:contain;}
+  body{margin:0;background:linear-gradient(180deg, #F6F2E9 0%, #EFE7D6 45%, #E9DFC8 100%) fixed;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding-bottom:60px;min-height:100vh;overscroll-behavior-y:contain;}
+  body.walkthrough-active{overscroll-behavior:none;touch-action:pan-y;}
   header{background:var(--navy);color:#fff;padding:18px 16px 16px;position:sticky;top:0;z-index:10;box-shadow:0 2px 6px rgba(0,0,0,0.12);}
   .brand{display:flex;align-items:center;justify-content:center;}
   .brand h1{margin:0;font-family:'Arial Narrow',Helvetica,sans-serif;font-weight:700;letter-spacing:0.06em;font-size:20px;text-transform:uppercase;}
@@ -882,7 +884,7 @@
     checkForMatch();
     document.getElementById('walkthroughProgress').textContent = 'Address ' + (i+1) + ' of ' + walkthroughQueue.length;
     document.getElementById('walkthroughAddressLabel').textContent = addr;
-    window.scrollTo({top:0, behavior:'smooth'});
+    window.scrollTo(0, 0);
   }
 
   function advanceWalkthrough(){
@@ -898,6 +900,7 @@
     walkthroughQueue = [];
     walkthroughIndex = -1;
     walkthroughPhase = null;
+    document.body.classList.remove('walkthrough-active');
     document.getElementById('walkthroughSetup').style.display = 'block';
     document.getElementById('walkthroughActive').style.display = 'none';
   }
@@ -910,6 +913,7 @@
     walkthroughActive = true;
     walkthroughPhase = phase;
     walkthroughQueue = queue;
+    document.body.classList.add('walkthrough-active');
     document.getElementById('walkthroughSetup').style.display = 'none';
     document.getElementById('walkthroughActive').style.display = 'block';
     goToWalkthroughAddress(0);
@@ -928,13 +932,34 @@
   // Swipe left/right to move between houses during a walkthrough \u2014 works
   // from anywhere on the page, not just when scrolled to the top.
   (function setupWalkthroughSwipe(){
-    var startX = null, startY = null, tracking = false;
+    var startX = null, startY = null, tracking = false, lockedHorizontal = false, decided = false;
     document.addEventListener('touchstart', function(e){
       if(!walkthroughActive) return;
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
       tracking = true;
+      decided = false;
+      lockedHorizontal = false;
     }, {passive:true});
+    document.addEventListener('touchmove', function(e){
+      if(!tracking || !walkthroughActive || startX === null) return;
+      var dx = e.touches[0].clientX - startX;
+      var dy = e.touches[0].clientY - startY;
+      if(!decided){
+        // Wait until the gesture is clearly one direction or the other
+        // before locking it in, so small jitters don't get mis-read.
+        if(Math.abs(dx) > 10 || Math.abs(dy) > 10){
+          decided = true;
+          lockedHorizontal = Math.abs(dx) > Math.abs(dy);
+        }
+      }
+      if(lockedHorizontal){
+        // This is a horizontal swipe: stop the browser from doing anything
+        // of its own (elastic bounce, native pull-to-refresh, edge-swipe
+        // navigation) with this same touch sequence.
+        e.preventDefault();
+      }
+    }, {passive:false});
     document.addEventListener('touchend', function(e){
       if(!tracking || startX === null) { tracking = false; return; }
       var dx = e.changedTouches[0].clientX - startX;
