@@ -488,6 +488,15 @@
     });
   }
 
+  // Trash Container items (7, 8, 9): when marked Bad, prefill the remarks
+  // with the standard note so it doesn't have to be typed out each time.
+  // The Good/Bad/N/A buttons stay exactly as they are for the spreadsheet.
+  var DEFAULT_BAD_REMARKS = {
+    '7': "Needs to be removed and picked up ASAP",
+    '8': "Address needs to be fixed and visible from the street",
+    '9': "Needs to be bigger"
+  };
+
   document.getElementById('checklistWrap').addEventListener('click', function(e){
     var btn = e.target.closest('.seg3 button');
     if(!btn) return;
@@ -498,12 +507,12 @@
     var changed = st.result !== v;
     st.result = v;
     if(changed){
-      st.remarks = '';
+      st.remarks = (v === 'Bad' && DEFAULT_BAD_REMARKS[id]) ? DEFAULT_BAD_REMARKS[id] : '';
       st.occurrence = '';
       st.incidentDate = '';
       st.photo = null;
       var remarksInput = document.querySelector('.item-remarks[data-item="' + id + '"]');
-      if(remarksInput) remarksInput.value = '';
+      if(remarksInput) remarksInput.value = st.remarks;
       var occInput = document.querySelector('.v-occurrence[data-item="' + id + '"]');
       if(occInput) occInput.value = '';
       var dateInput = document.querySelector('.v-date[data-item="' + id + '"]');
