@@ -131,7 +131,7 @@
   <div class="card" id="walkthroughCard">
     <h2>Phase Walkthrough</h2>
     <div id="walkthroughSetup">
-      <p style="font-size:13px;color:var(--ink-soft);margin-top:0;">Pick a phase and step through every address in it one at a time \u2014 no retyping the address between houses.</p>
+      <p style="font-size:13px;color:var(--ink-soft);margin-top:0;">Pick a phase and step through every address in it one at a time &mdash; no retyping the address between houses.</p>
       <div class="row">
         <div class="field">
           <label for="walkthroughPhase">Phase</label>
@@ -162,6 +162,7 @@
         </div>
       </div>
       <div id="walkthroughAddressLabel" style="font-size:15px;font-weight:700;color:var(--ink);"></div>
+      <div style="font-size:11.5px;color:var(--ink-faint);margin-top:4px;">Swipe left for next house, right to go back &mdash; works anywhere on the page.</div>
     </div>
   </div>
 
@@ -864,6 +865,10 @@
   }
 
   function goToWalkthroughAddress(i){
+    if(i < 0){
+      showToast('This is the first address in this phase.');
+      return;
+    }
     if(i >= walkthroughQueue.length){
       showToast('Phase ' + walkthroughPhase + ' complete \u2014 ' + walkthroughQueue.length + ' addresses done.');
       endWalkthrough();
@@ -877,11 +882,15 @@
     checkForMatch();
     document.getElementById('walkthroughProgress').textContent = 'Address ' + (i+1) + ' of ' + walkthroughQueue.length;
     document.getElementById('walkthroughAddressLabel').textContent = addr;
-    document.querySelector('.card h2').scrollIntoView({behavior:'smooth', block:'start'});
+    window.scrollTo({top:0, behavior:'smooth'});
   }
 
   function advanceWalkthrough(){
     goToWalkthroughAddress(walkthroughIndex + 1);
+  }
+
+  function goBackWalkthrough(){
+    goToWalkthroughAddress(walkthroughIndex - 1);
   }
 
   function endWalkthrough(){
@@ -915,6 +924,30 @@
     resetForm();
     showToast('Walkthrough ended.');
   });
+
+  // Swipe left/right to move between houses during a walkthrough \u2014 works
+  // from anywhere on the page, not just when scrolled to the top.
+  (function setupWalkthroughSwipe(){
+    var startX = null, startY = null, tracking = false;
+    document.addEventListener('touchstart', function(e){
+      if(!walkthroughActive) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      tracking = true;
+    }, {passive:true});
+    document.addEventListener('touchend', function(e){
+      if(!tracking || startX === null) { tracking = false; return; }
+      var dx = e.changedTouches[0].clientX - startX;
+      var dy = e.changedTouches[0].clientY - startY;
+      tracking = false;
+      startX = null;
+      if(!walkthroughActive) return;
+      if(Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5){
+        if(dx < 0){ advanceWalkthrough(); } else { goBackWalkthrough(); }
+      }
+    });
+  })();
+
   document.getElementById('cancelEditBtn').addEventListener('click', function(){
     resetForm();
     showToast('Edit cancelled.');
