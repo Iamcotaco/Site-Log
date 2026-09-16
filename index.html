@@ -1719,9 +1719,10 @@
       if(!confirmedVertical){
         if(Math.abs(dx) > 15 && Math.abs(dx) > Math.abs(dy)){
           pulling = false;
+          pullIndicator.style.transform = 'translateY(-100%)';
           return;
         }
-        if(dy > 15) confirmedVertical = true;
+        if(dy > 15 && dy > Math.abs(dx)) confirmedVertical = true;
       }
       if(confirmedVertical && dy > 0 && window.scrollY === 0){
         var pct = Math.min(1, dy / threshold);
@@ -1730,9 +1731,9 @@
       }
     }, {passive:true});
     document.addEventListener('touchend', function(e){
+      pullIndicator.style.transform = 'translateY(-100%)';
       if(!pulling || startY === null || walkthroughActive){ pulling = false; return; }
       var dy = (e.changedTouches[0].clientY - startY);
-      pullIndicator.style.transform = 'translateY(-100%)';
       if(confirmedVertical && dy > threshold && !selectMode){
         showToast('Refreshing...');
         loadEntries();
