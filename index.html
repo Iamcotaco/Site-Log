@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Site Inspection Log</title>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="apple-touch-icon.png">
@@ -34,7 +34,9 @@
     --radius:10px;
   }
   *{box-sizing:border-box;}
-  html{overscroll-behavior-y:contain;}
+  html{overscroll-behavior-y:contain;touch-action:manipulation;-webkit-text-size-adjust:100%;}
+  /* iOS zooms the page whenever a field under 16px gets focus, so every field is 16px. */
+  input,select,textarea,.item-remarks,.violation-row input{font-size:16px !important;}
   body{margin:0;background:linear-gradient(180deg, #F6F2E9 0%, #EFE7D6 45%, #E9DFC8 100%) fixed;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;padding-bottom:60px;min-height:100vh;overscroll-behavior-y:contain;}
   body.walkthrough-active{overscroll-behavior:none;touch-action:pan-y;}
   header{background:var(--navy);color:#fff;padding:20px 16px 16px;position:sticky;top:0;z-index:10;box-shadow:0 6px 20px rgba(22,35,63,0.28), 0 2px 6px rgba(0,0,0,0.12);}
@@ -141,6 +143,18 @@
   .completion-toggle button:last-child{border-right:none;}
   .completion-toggle button:active{transform:scale(0.96);}
   .completion-toggle button.active{background:var(--navy);color:#fff;}
+
+  /* Items that were Bad on the previous inspection */
+  .item.was-bad{background:var(--red-bg);box-shadow:inset 4px 0 0 var(--red);}
+  details.category.has-prev-bad summary{background:var(--red-bg);color:var(--red);}
+  .prev-note{font-size:12px;font-weight:700;color:var(--red);margin-bottom:8px;}
+  .prev-note .prev-note-remarks{display:block;font-weight:600;color:var(--ink-soft);margin-top:2px;}
+  .prev-note img{display:block;width:96px;height:96px;object-fit:cover;border-radius:8px;border:1px solid rgba(194,59,46,0.35);margin-top:8px;}
+  .prev-note img.expanded{width:100%;height:auto;max-height:none;}
+  .prev-photo{margin-bottom:12px;}
+  .prev-photo-cap{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink-faint);margin-bottom:8px;}
+  .prev-photo img{display:block;width:100%;max-height:200px;object-fit:cover;border-radius:8px;border:1px solid rgba(22,35,63,0.3);}
+  .prev-photo img.expanded{max-height:none;object-fit:contain;}
 </style>
 </head>
 <body>
@@ -384,6 +398,22 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
+// No zooming at all: block pinch and double-tap zoom (Safari ignores user-scalable=no).
+(function disableZoom(){
+  ['gesturestart','gesturechange','gestureend'].forEach(function(ev){
+    document.addEventListener(ev, function(e){ e.preventDefault(); }, {passive:false});
+  });
+  document.addEventListener('touchmove', function(e){
+    if(e.touches && e.touches.length > 1) e.preventDefault();
+  }, {passive:false});
+  var lastTouchEnd = 0;
+  document.addEventListener('touchend', function(e){
+    var now = Date.now();
+    if(now - lastTouchEnd < 300 && e.target && !e.target.closest('input,textarea,select,button')) e.preventDefault();
+    lastTouchEnd = now;
+  }, {passive:false});
+})();
+
 (function setupMenuAndPages(){
   // Move the Export and Backup cards out of the main scroll and into their
   // own full-screen pages, reached through the hamburger menu instead of
@@ -427,6 +457,7 @@
       closePage(btn.closest('.app-page').id);
     });
   });
+
 })();
 
 (function(){
@@ -445,6 +476,7 @@
       toastEl.style.transform = 'translateX(-50%) translateY(20px)';
     }, Math.min(6000, Math.max(2600, msg.length * 60)));
   }
+  window.showToast = showToast;
 
   var SUPABASE_URL = 'https://hazvvhnjizfhxwxagqnu.supabase.co';
   var SUPABASE_KEY = 'sb_publishable_yp_maklx2blPUG64LUub1w_laG0pYxG';
@@ -713,6 +745,7 @@
     applyChecklistDefaults();
     syncChecklistUIFromState();
     document.getElementById('prevMatchBanner').style.display = 'none';
+    clearPrevMarks();
     document.getElementById('lotErr').classList.remove('show');
     document.getElementById('addressErr').classList.remove('show');
     autoLoadedKey = null;
@@ -769,6 +802,7 @@
     editingEntryId = entry.id;
     autoLoadedKey = null;
     document.getElementById('prevMatchBanner').style.display = 'none';
+    clearPrevMarks();
 
     document.getElementById('builderName').value = entry.builder || '';
     document.getElementById('phase').value = entry.phase || '';
@@ -818,6 +852,50 @@
     document.getElementById('saveBtn').textContent = 'Save inspection';
   }
 
+  // Show what the last inspection looked like: previous main photo, and a red
+  // highlight (with remarks + photo) on every item that was Bad last time.
+  function clearPrevMarks(){
+    document.querySelectorAll('.item.was-bad').forEach(function(el){ el.classList.remove('was-bad'); });
+    document.querySelectorAll('details.category.has-prev-bad').forEach(function(el){ el.classList.remove('has-prev-bad'); });
+    document.querySelectorAll('.prev-note').forEach(function(el){ el.remove(); });
+    var old = document.getElementById('prevPhotoWrap');
+    if(old) old.remove();
+  }
+
+  function showPrevMarks(prev){
+    clearPrevMarks();
+    var label = prev.date ? ' · ' + escapeHtml(prev.date) : '';
+    if(prev.mainPhoto){
+      var wrap = document.createElement('div');
+      wrap.id = 'prevPhotoWrap';
+      wrap.className = 'prev-photo';
+      wrap.innerHTML = '<div class="prev-photo-cap">Last inspection photo' + label + ' — tap to enlarge</div><img src="' + prev.mainPhoto + '" alt="Previous photo of this house">';
+      mainPhotoBox.parentNode.insertBefore(wrap, mainPhotoBox);
+    }
+    Object.keys(prev.items || {}).forEach(function(id){
+      var st = prev.items[id];
+      if(st.result !== 'Bad') return;
+      var itemEl = document.querySelector('.item[data-item="' + id + '"]');
+      if(!itemEl) return;
+      itemEl.classList.add('was-bad');
+      var details = itemEl.closest('details.category');
+      if(details){ details.classList.add('has-prev-bad'); details.open = true; }
+      var note = document.createElement('div');
+      note.className = 'prev-note';
+      var txt = 'Bad last inspection' + label;
+      if(st.occurrence) txt += ' · occurrence #' + escapeHtml(String(st.occurrence));
+      note.innerHTML = txt + (st.remarks ? '<span class="prev-note-remarks">' + escapeHtml(st.remarks) + '</span>' : '') +
+        (st.photo ? '<img src="' + st.photo + '" alt="Previous photo of this issue">' : '');
+      var lbl = itemEl.querySelector('.item-label');
+      lbl.parentNode.insertBefore(note, lbl.nextSibling);
+    });
+  }
+
+  document.addEventListener('click', function(e){
+    var img = e.target.closest('.prev-photo img, .prev-note img');
+    if(img) img.classList.toggle('expanded');
+  });
+
   function applyPrevEntry(prev){
     editingEntryId = prev.id;
     document.getElementById('builderName').value = prev.builder || '';
@@ -840,6 +918,7 @@
       };
     });
     syncChecklistUIFromState();
+    showPrevMarks(prev);
     document.getElementById('saveBtn').textContent = 'Update inspection';
   }
 
@@ -861,12 +940,14 @@
     }else{
       autoLoadedKey = null;
       banner.style.display = 'none';
+      clearPrevMarks();
     }
   }
 
   document.getElementById('lotNumber').addEventListener('change', checkForMatch);
   document.getElementById('address').addEventListener('change', checkForMatch);
   document.getElementById('block').addEventListener('change', checkForMatch);
+
 
   document.getElementById('clearLoadedBtn').addEventListener('click', function(){
     document.getElementById('builderName').value = '';
@@ -881,6 +962,7 @@
     editingEntryId = null;
     document.getElementById('saveBtn').textContent = 'Save inspection';
     document.getElementById('prevMatchBanner').style.display = 'none';
+    clearPrevMarks();
   });
 
   async function saveEntry(){
