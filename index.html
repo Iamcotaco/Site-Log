@@ -502,6 +502,27 @@
     return data.publicUrl;
   }
 
+  // After an update is saved, delete the old photo files it replaced so they
+  // stop using storage. Only files no longer referenced by the new record go.
+  function photoUrlsOf(entry){
+    var urls = [];
+    if(entry.mainPhoto) urls.push(entry.mainPhoto);
+    Object.keys(entry.items || {}).forEach(function(k){ if(entry.items[k].photo) urls.push(entry.items[k].photo); });
+    return urls;
+  }
+  function deleteReplacedPhotos(oldEntry, newEntry){
+    var keep = {};
+    photoUrlsOf(newEntry).forEach(function(u){ keep[u] = true; });
+    var marker = '/object/public/photos/';
+    var paths = photoUrlsOf(oldEntry).filter(function(u){
+      return !keep[u] && u.indexOf(marker) !== -1;
+    }).map(function(u){ return decodeURIComponent(u.split(marker)[1].split('?')[0]); });
+    if(!paths.length) return;
+    sb.storage.from('photos').remove(paths).then(function(res){
+      if(res && res.error) console.error('Could not remove old photos', res.error);
+    }).catch(function(err){ console.error('Could not remove old photos', err); });
+  }
+
   async function saveEntryRemote(entry){
     if(entry.mainPhoto){
       entry.mainPhoto = await uploadPhotoIfNeeded(entry.mainPhoto, entry.id + '/main_' + Date.now() + '.jpg');
@@ -677,6 +698,8 @@
       getState(id).photo = dataUrl;
       var thumbWrap = document.querySelector('.v-photo-thumb-wrap[data-item="' + id + '"]');
       thumbWrap.innerHTML = '<img class="photo-mini-thumb" src="' + dataUrl + '">';
+      var oldItemImg = document.querySelector('.item[data-item="' + id + '"] .prev-note img');
+      if(oldItemImg) oldItemImg.remove();   // new photo taken: old one goes away
     });
   });
 
@@ -711,6 +734,8 @@
       mainPhotoDataUrl = dataUrl;
       mainPhotoBox.classList.add('has-photo');
       mainPhotoBox.innerHTML = '<img src="' + dataUrl + '">';
+      var oldWrap = document.getElementById('prevPhotoWrap');
+      if(oldWrap) oldWrap.remove();   // new photo taken: old one goes away
     });
   }
   mainPhotoInputCamera.addEventListener('change', function(){ handleMainPhotoFile(mainPhotoInputCamera.files[0]); });
@@ -996,11 +1021,17 @@
       savedAt: Date.now()
     };
 
+    // Updating an existing record: if no new house photo was taken, keep the old one
+    // rather than leaving the record without a photo.
+    var oldEntry = isEditing ? allEntries.find(function(x){ return x.id === id; }) : null;
+    if(oldEntry && !entry.mainPhoto && oldEntry.mainPhoto) entry.mainPhoto = oldEntry.mainPhoto;
+
     var saveBtn = document.getElementById('saveBtn');
     saveBtn.disabled = true;
     saveBtn.textContent = entry.mainPhoto || Object.keys(entry.items||{}).some(function(k){ return entry.items[k].photo; }) ? 'Uploading photos...' : (isEditing ? 'Updating...' : 'Saving...');
     try{
       await saveEntryRemote(entry);
+      if(oldEntry) deleteReplacedPhotos(oldEntry, entry);
       saveBtn.textContent = isEditing ? 'Updating...' : 'Saving...';
       if(isEditing){
         allEntries = allEntries.map(function(x){ return x.id === id ? entry : x; });
